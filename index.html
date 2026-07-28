@@ -343,7 +343,6 @@
   }
   .icon-btn:disabled{opacity:0.3;cursor:not-allowed;}
   .icon-btn.full{background:var(--green);border-color:var(--green);color:#fff;}
-  .verify-btn{margin-top:10px;}
   .msg{font-size:13px;padding:10px 12px;border-radius:10px;margin-top:10px;}
   .msg.err{background:#FBE2E2;color:#8a1f1f;}
   .msg.ok{background:#DCEFDC;color:var(--green);}
@@ -354,8 +353,6 @@
   .stat-card{background:#FFFDF9;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;}
   .stat-val{font-family:'Baloo 2',cursive;font-size:22px;font-weight:800;color:var(--maroon);}
   .stat-lbl{font-size:11.5px;color:#8a6a55;font-weight:600;}
-
-  a.link{color:var(--maroon);font-weight:700;}
 </style>
 </head>
 <body>
@@ -476,7 +473,7 @@
     <div id="committeePanel" class="hidden">
 
       <div class="card">
-        <p class="section-label">📷 Scan a coupon QR</p>
+        <p class="section-label">📷 Scan QR to Distribute Food</p>
         <button class="btn btn-outline btn-block" id="camToggleBtn" onclick="toggleCamera()">Start camera scanner</button>
         <div class="cam-box hidden" id="camBox">
           <video id="camVideo" playsinline muted></video>
@@ -490,7 +487,7 @@
         <p class="section-label">⌨️ Or look up manually</p>
         <div class="search-row">
           <input type="text" id="lookupInput" placeholder="Order ID or 10-digit phone">
-          <button class="btn btn-primary" onclick="doLookup()">Find</button>
+          <button class="btn btn-primary" onclick="doLookup(false)">Find</button>
         </div>
       </div>
 
@@ -544,10 +541,9 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { 
-    getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs 
+    getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, onSnapshot 
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // Replace credentials with your project's Firebase config from Console
   const firebaseConfig = {
     apiKey: "AIzaSyDeVG7OZ-F0wASmhkFr6xRN5nNKceWSSzk",
     authDomain: "my-website-db-ee1d5.firebaseapp.com",
@@ -571,6 +567,14 @@
     const ref = doc(db, "bookings", orderId.toUpperCase().trim());
     const snap = await getDoc(ref);
     return snap.exists() ? snap.data() : null;
+  };
+
+  /* REAL-TIME LISTENERS */
+  window.dbListenToBooking = function(orderId, callback) {
+    const ref = doc(db, "bookings", orderId.toUpperCase().trim());
+    return onSnapshot(ref, (snap) => {
+      if(snap.exists()) callback(snap.data());
+    });
   };
 
   window.dbGetBookingsByPhone = async function(phone) {
@@ -647,10 +651,11 @@ const CONFIG = {
 };
 
 /* ================= state ================= */
-let cart = {};           // key `${day}_${meal}` -> {qty, parcelQty, type}
+let cart = {};           
 let activeDay = CONFIG.days[0].id;
 let lastBooking = null;
 let camStream = null, camLoopHandle = null;
+let ticketUnsubscribe = null;
 
 function cartKey(day, meal){ return day + '_' + meal; }
 function getRow(day, meal){
@@ -693,7 +698,6 @@ function effectiveInfo(dayId, mealId, chosenType){
   };
 }
 
-/* Audio feedback */
 function playBeep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -934,7 +938,7 @@ async function confirmBooking(){
       complimentary: info.complimentary,
       unitPrice: info.price,
       qty: row.qty, parcelQty: row.parcelQty,
-      delivered: 0
+      delivered: 0 // Default: Meals are NOT served yet
     });
   });
   const total = grandTotal();
@@ -945,8 +949,7 @@ async function confirmBooking(){
     utr: utr || null,
     paymentStatus: total>0 ? 'pending' : 'complimentary',
     createdAt: Date.now(),
-    verifiedAt: null,
-    logs: [] // Audit log for food distribution
+    verifiedAt: null
   };
 
   const btn = document.getElementById('confirmBookingBtn');
@@ -954,6 +957,13 @@ async function confirmBooking(){
   try{
     await window.dbSetBooking(booking);
     lastBooking = booking;
+
+    // Attach real-time listener to automatically update UI on status change
+    if(ticketUnsubscribe) ticketUnsubscribe();
+    ticketUnsubscribe = window.dbListenToBooking(orderId, (updatedBooking) => {
+      renderTicket(updatedBooking);
+    });
+
     renderTicket(booking);
     document.getElementById('bookForm').style.display = 'none';
     document.getElementById('ticketView').classList.remove('hidden');
@@ -979,7 +989,7 @@ function itemLine(it){
   return `
     <div class="ticket-item">
       <span class="lbl">${it.dayLabel} · ${it.mealLabel}${typeTag}${freeTag}</span>
-      <span class="val">${it.qty} plate${it.qty>1?'s':''}${it.parcelQty>0?` · ${it.parcelQty} parcel`:''}</span>
+      <span class="val">${it.delivered}/${it.qty} served (${it.qty} booked)</span>
     </div>`;
 }
 
@@ -1001,13 +1011,15 @@ function renderTicket(b){
         <div class="ticket-item"><span class="lbl">Total ${b.total>0?'paid':''}</span><span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span></div>
       </div>
     </div>
-    <div class="note">Show this QR at the food counter — the volunteer scans it once per meal to mark delivery. Keep a screenshot handy in case you lose signal.</div>
+    <div class="note">Show this QR code at the food counter. Food is served strictly upon QR scan by a volunteer.</div>
     <button class="btn btn-outline btn-block" onclick="startOver()">Book more coupons</button>
   `;
+  document.getElementById('qrHolder').innerHTML = '';
   new QRCode(document.getElementById('qrHolder'), { text: b.orderId, width:180, height:180, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
 }
 
 function startOver(){
+  if(ticketUnsubscribe) ticketUnsubscribe();
   cart = {}; lastBooking = null;
   document.getElementById('userName').value='';
   document.getElementById('userPhone').value='';
@@ -1078,7 +1090,7 @@ function renderMiniTicketInto(container, b){
         return `
         <div class="ticket-item">
           <span class="lbl">${it.dayLabel} · ${it.mealLabel}${typeTag}${freeTag}</span>
-          <span class="val">${it.delivered}/${it.qty} delivered${it.parcelQty>0?` · ${it.parcelQty} parcel`:''}</span>
+          <span class="val">${it.delivered}/${it.qty} served</span>
         </div>`;
       }).join('')}
     </div>`;
@@ -1093,7 +1105,7 @@ function checkPin(){
     document.getElementById('pinGate').classList.add('hidden');
     document.getElementById('committeePanel').classList.remove('hidden');
     msg.innerHTML='';
-    generateReports(); // Automatically fetch analytics on entry
+    generateReports(); 
   }else{
     msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
   }
@@ -1109,7 +1121,7 @@ async function saveBooking(b){
   await window.dbSetBooking(b);
 }
 
-async function doLookup(){
+async function doLookup(isFromScanner = false){
   const q = document.getElementById('lookupInput').value.trim();
   const results = document.getElementById('lookupResults');
   results.innerHTML = '<div class="card"><div class="empty">Searching…</div></div>';
@@ -1128,25 +1140,22 @@ async function doLookup(){
     return;
   }
   results.innerHTML='';
-  matches.forEach(b=> renderLookupCard(results, b));
+  matches.forEach(b=> renderLookupCard(results, b, isFromScanner));
 }
 
-function renderLookupCard(container, b){
+function renderLookupCard(container, b, isFromScanner = false){
   const div = document.createElement('div');
   div.className = 'lookup-card';
   div.id = 'lc_'+b.orderId;
   container.appendChild(div);
-  paintLookupCard(b);
+  paintLookupCard(b, isFromScanner);
 }
 
-function paintLookupCard(b){
+function paintLookupCard(b, isFromScanner = false){
   const div = document.getElementById('lc_'+b.orderId);
   if(!div) return;
   const isVerified = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
   const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
-  
-  // Calculate if there are any pending meals to serve
-  const hasOutstanding = b.items.some(it => it.delivered < it.qty);
 
   div.innerHTML = `
     <div class="lc-head">
@@ -1159,81 +1168,50 @@ function paintLookupCard(b){
 
     ${!isVerified ? `
       <div class="note alert" style="margin-top:0; margin-bottom:12px;">
-        ⚠️ <strong>Payment Unverified</strong>: You cannot mark meals as delivered until the payment is marked verified.
+        ⚠️ <strong>Payment Unverified</strong>: Verify payment below before serving meals.
       </div>
     ` : ''}
 
     ${b.items.map((it,idx)=>{
       const typeTag = it.type ? (it.type==='veg' ? 'Veg' : 'Non-veg') : '';
+      const hasUnserved = it.delivered < it.qty;
       return `
       <div class="deliver-row">
         <div class="dr-info">
           <div class="dr-meal">${it.dayLabel} · ${it.mealLabel}${typeTag?' — '+typeTag:''}</div>
-          <div class="dr-sub">${it.complimentary?'Complimentary · ':''}${it.parcelQty>0?it.parcelQty+' parcel':''}</div>
+          <div class="dr-sub">${it.delivered}/${it.qty} Served</div>
         </div>
         <div class="deliver-actions">
-          <span class="dr-progress">${it.delivered}/${it.qty}</span>
-          <button class="icon-btn" ${(!isVerified || it.delivered<=0)?'disabled':''} onclick="adjustDelivered('${b.orderId}',${idx},-1)">−</button>
-          <button class="icon-btn ${it.delivered>=it.qty?'full':''}" ${(!isVerified || it.delivered>=it.qty)?'disabled':''} onclick="adjustDelivered('${b.orderId}',${idx},1)">+</button>
+          ${isFromScanner && isVerified && hasUnserved ? `
+            <button class="btn btn-primary" style="padding:6px 12px; font-size:12px;" onclick="deliverMeal('${b.orderId}', ${idx})">Serve 1 Meal</button>
+          ` : `
+            <span class="dr-progress">${it.delivered}/${it.qty}</span>
+          `}
         </div>
       </div>`;
     }).join('')}
 
-    ${isVerified && hasOutstanding ? `
-      <button class="btn btn-outline btn-block" style="margin-top:10px; border-color:var(--green); color:var(--green);" onclick="quickServeAll('${b.orderId}')">⚡ Deliver All Remaining Meals</button>
-    ` : ''}
-
     ${b.paymentStatus==='pending' ? `
       <div class="field" style="margin-top:10px;">
-        <label>UTR / reference (if visible in your UPI app)</label>
+        <label>UTR / reference number</label>
         <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="Optional">
       </div>
-      <button class="btn btn-primary btn-block verify-btn" onclick="markVerified('${b.orderId}')">Mark payment verified</button>
+      <button class="btn btn-primary btn-block verify-btn" onclick="markVerified('${b.orderId}')">Mark Payment Verified</button>
     ` : ''}
   `;
 }
 
-async function adjustDelivered(orderId, idx, delta){
-  const b = await fetchBooking(orderId);
-  if(!b) return;
-  if(b.paymentStatus === 'pending') {
-    alert('Cannot deliver meals for unverified payments.');
-    return;
-  }
-  
-  const it = b.items[idx];
-  it.delivered = Math.max(0, Math.min(it.qty, it.delivered+delta));
-  
-  // Audit log entry
-  if(!b.logs) b.logs = [];
-  b.logs.push({
-    action: delta > 0 ? 'SERVED' : 'UNSERVED',
-    item: it.dayLabel + ' ' + it.mealLabel,
-    time: new Date().toISOString()
-  });
-
-  await saveBooking(b);
-  paintLookupCard(b);
-  generateReports(); // refresh metrics
-}
-
-async function quickServeAll(orderId) {
+async function deliverMeal(orderId, itemIdx){
   const b = await fetchBooking(orderId);
   if(!b || b.paymentStatus === 'pending') return;
-  
-  b.items.forEach(it => {
-    it.delivered = it.qty;
-  });
 
-  if(!b.logs) b.logs = [];
-  b.logs.push({
-    action: 'QUICK_SERVE_ALL',
-    time: new Date().toISOString()
-  });
-
-  await saveBooking(b);
-  paintLookupCard(b);
-  generateReports();
+  const item = b.items[itemIdx];
+  if(item.delivered < item.qty) {
+    item.delivered += 1;
+    await saveBooking(b);
+    paintLookupCard(b, true);
+    generateReports();
+  }
 }
 
 async function markVerified(orderId){
@@ -1244,7 +1222,7 @@ async function markVerified(orderId){
   b.paymentStatus = 'verified';
   b.verifiedAt = Date.now();
   await saveBooking(b);
-  paintLookupCard(b);
+  paintLookupCard(b, false);
   loadPendingPayments();
   generateReports();
 }
@@ -1265,7 +1243,7 @@ async function loadPendingPayments(){
           <div class="dr-meal">${escapeHtml(b.name)} · ₹${b.total}</div>
           <div class="dr-sub">${b.orderId} · ${b.phone}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
         </div>
-        <button class="btn btn-outline" onclick="document.getElementById('lookupInput').value='${b.orderId}'; doLookup(); window.scrollTo({top:0,behavior:'smooth'});">Review</button>
+        <button class="btn btn-outline" onclick="document.getElementById('lookupInput').value='${b.orderId}'; doLookup(false); window.scrollTo({top:0,behavior:'smooth'});">Review</button>
       `;
       wrap.appendChild(row);
     });
@@ -1304,7 +1282,7 @@ async function generateReports() {
 
     let html = '<strong>Plate Count Breakdown:</strong><ul style="padding-left:18px; margin-top:6px;">';
     Object.keys(breakdown).forEach(k => {
-      html += `<li><strong>${k}</strong>: ${breakdown[k].served} served / ${breakdown[k].ordered} ordered</li>`;
+      html += `<li><strong>${k}</strong>: ${breakdown[k].served} served / ${breakdown[k].ordered} booked</li>`;
     });
     html += '</ul>';
     document.getElementById('reportMealBreakdown').innerHTML = html;
@@ -1354,6 +1332,7 @@ async function toggleCamera(){
     msg.innerHTML = '<div class="msg err">Could not access the camera on this device/browser. Use manual Order ID lookup below instead.</div>';
   }
 }
+
 function stopCamera(){
   if(camLoopHandle) cancelAnimationFrame(camLoopHandle);
   camLoopHandle = null;
@@ -1362,6 +1341,7 @@ function stopCamera(){
   const btn = document.getElementById('camToggleBtn');
   if(btn) btn.textContent = 'Start camera scanner';
 }
+
 function scanLoop(){
   const video = document.getElementById('camVideo');
   const canvas = document.getElementById('camCanvas');
@@ -1375,11 +1355,11 @@ function scanLoop(){
       const img = ctx.getImageData(0,0,canvas.width,canvas.height);
       const code = jsQR(img.data, img.width, img.height);
       if(code && code.data){
-        playBeep(); // Play sound on scan
+        playBeep();
         document.getElementById('camMsg').innerHTML = `<div class="msg ok">Scanned: ${escapeHtml(code.data)}</div>`;
         document.getElementById('lookupInput').value = code.data;
         stopCamera();
-        doLookup();
+        doLookup(true); // Pass true to enable "Serve 1 Meal" action
         window.scrollTo({top:0, behavior:'smooth'});
         return;
       }
