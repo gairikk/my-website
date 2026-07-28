@@ -425,10 +425,16 @@
               <span style="font-size:13.5px;">I have completed the UPI payment for ₹<span id="paidAmountLbl">0</span></span>
             </label>
           </div>
-          <div class="field">
-            <label for="utrInput">UPI reference / UTR number (optional, speeds up verification)</label>
-            <input type="text" id="utrInput" placeholder="12-digit UTR from your payment app">
+
+          <!-- Mandatory UTR Field Section -->
+          <div id="utrContainer" class="hidden" style="margin-top:12px;">
+            <div class="field">
+              <label for="utrInput">12-Digit UPI UTR / Reference Number <span style="color:#8a1f1f;">*</span></label>
+              <input type="tel" id="utrInput" placeholder="Enter 12-digit UTR from payment app" maxlength="12" autocomplete="off">
+              <div id="utrHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Please enter exactly 12 numeric digits from your UPI transaction receipt.</div>
+            </div>
           </div>
+
           <div class="note">Payments are collected directly by the puja committee's UPI ID. A volunteer verifies each payment against the committee's UPI statement (using your name / phone / UTR) and marks it "Verified" from the Committee tab. Your QR coupon is issued right away, marked <em>Payment pending</em> until then.</div>
         </div>
 
@@ -893,7 +899,12 @@ function goToReview(){
     document.getElementById('upiIdLabel').textContent = CONFIG.upiId;
     document.getElementById('upiQr').innerHTML = '';
     new QRCode(document.getElementById('upiQr'), { text: upiLink, width:150, height:150, colorDark:'#4A0A12', colorLight:'#FFFFFF' });
+    
+    // Reset Checkbox and UTR inputs
     document.getElementById('paidConfirm').checked = false;
+    document.getElementById('utrContainer').classList.add('hidden');
+    document.getElementById('utrInput').value = '';
+    document.getElementById('utrHelpText').classList.add('hidden');
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Confirm Booking & Get QR Coupon';
   } else {
@@ -907,9 +918,44 @@ function goToReview(){
   document.getElementById('reviewCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
+/* MANDATORY CHECKBOX & 12-DIGIT UTR VALIDATION */
+function validateUtrAndConfirmState() {
+  const isChecked = document.getElementById('paidConfirm').checked;
+  const utrContainer = document.getElementById('utrContainer');
+  const utrInput = document.getElementById('utrInput');
+  const utrHelp = document.getElementById('utrHelpText');
+  const confirmBtn = document.getElementById('confirmBookingBtn');
+  const total = grandTotal();
+
+  if(total === 0) return; // Complimentary orders ignore this
+
+  if (isChecked) {
+    utrContainer.classList.remove('hidden');
+    const utrVal = utrInput.value.trim();
+    const isValidUtr = /^\d{12}$/.test(utrVal);
+
+    if (utrVal.length > 0 && !isValidUtr) {
+      utrHelp.classList.remove('hidden');
+    } else {
+      utrHelp.classList.add('hidden');
+    }
+
+    confirmBtn.disabled = !isValidUtr;
+  } else {
+    utrContainer.classList.add('hidden');
+    confirmBtn.disabled = true;
+  }
+}
+
 document.addEventListener('change', (e)=>{
   if(e.target && e.target.id==='paidConfirm'){
-    document.getElementById('confirmBookingBtn').disabled = !e.target.checked;
+    validateUtrAndConfirmState();
+  }
+});
+
+document.addEventListener('input', (e)=>{
+  if(e.target && e.target.id==='utrInput'){
+    validateUtrAndConfirmState();
   }
 });
 
@@ -925,6 +971,13 @@ async function confirmBooking(){
   const phone = document.getElementById('userPhone').value.trim();
   const utrEl = document.getElementById('utrInput');
   const utr = utrEl ? utrEl.value.trim() : '';
+  const total = grandTotal();
+
+  if(total > 0 && !/^\d{12}$/.test(utr)) {
+    alert('Please enter a valid 12-digit UPI UTR number.');
+    return;
+  }
+
   const items = [];
   Object.keys(cart).forEach(k=>{
     const row = cart[k];
@@ -938,10 +991,10 @@ async function confirmBooking(){
       complimentary: info.complimentary,
       unitPrice: info.price,
       qty: row.qty, parcelQty: row.parcelQty,
-      delivered: 0 // Default: Meals are NOT served yet
+      delivered: 0
     });
   });
-  const total = grandTotal();
+
   const orderId = genOrderId();
   const booking = {
     orderId, name, phone, items,
@@ -958,7 +1011,6 @@ async function confirmBooking(){
     await window.dbSetBooking(booking);
     lastBooking = booking;
 
-    // Attach real-time listener to automatically update UI on status change
     if(ticketUnsubscribe) ticketUnsubscribe();
     ticketUnsubscribe = window.dbListenToBooking(orderId, (updatedBooking) => {
       renderTicket(updatedBooking);
@@ -1007,6 +1059,7 @@ function renderTicket(b){
         <div class="qr-wrap" id="qrHolder"></div>
         <div class="ticket-name">${escapeHtml(b.name)}</div>
         <div class="ticket-phone">${b.phone}</div>
+        ${b.utr ? `<div style="text-align:center; font-size:12px; color:#8a6a55; margin-bottom:8px;">UTR: ${escapeHtml(b.utr)}</div>` : ''}
         ${b.items.map(itemLine).join('')}
         <div class="ticket-item"><span class="lbl">Total ${b.total>0?'paid':''}</span><span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span></div>
       </div>
@@ -1084,6 +1137,7 @@ function renderMiniTicketInto(container, b){
       <div class="qr-wrap" id="qr_${b.orderId}"></div>
       <div class="ticket-name">${escapeHtml(b.name)}</div>
       <div class="ticket-phone">${b.phone}</div>
+      ${b.utr ? `<div style="text-align:center; font-size:12px; color:#8a6a55; margin-bottom:8px;">UTR: ${escapeHtml(b.utr)}</div>` : ''}
       ${b.items.map(it=>{
         const typeTag = it.type ? `<span class="tag ${it.type==='veg'?'veg':'nonveg'}">${it.type==='veg'?'Veg':'Non-veg'}</span>` : '';
         const freeTag = it.complimentary ? `<span class="tag free">FREE</span>` : '';
@@ -1194,7 +1248,7 @@ function paintLookupCard(b, isFromScanner = false){
     ${b.paymentStatus==='pending' ? `
       <div class="field" style="margin-top:10px;">
         <label>UTR / reference number</label>
-        <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="Optional">
+        <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="Required for verification" maxlength="12">
       </div>
       <button class="btn btn-primary btn-block verify-btn" onclick="markVerified('${b.orderId}')">Mark Payment Verified</button>
     ` : ''}
@@ -1359,7 +1413,7 @@ function scanLoop(){
         document.getElementById('camMsg').innerHTML = `<div class="msg ok">Scanned: ${escapeHtml(code.data)}</div>`;
         document.getElementById('lookupInput').value = code.data;
         stopCamera();
-        doLookup(true); // Pass true to enable "Serve 1 Meal" action
+        doLookup(true);
         window.scrollTo({top:0, behavior:'smooth'});
         return;
       }
