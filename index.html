@@ -6,11 +6,7 @@
 <title>Bhog Bela — Durga Puja Food Coupons</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<!-- QR Code Generator Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-<!-- FIXED: Working jsQR CDN Links (jsDelivr with UNPKG fallback) -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/jsqr@1.4.0/dist/jsQR.js';"></script>
 
 <style>
@@ -1319,10 +1315,10 @@ function parseQrPayload(raw){
 function doLookupDirect(inputId) {
   const val = document.getElementById(inputId).value.trim();
   const activeTab = document.getElementById('view-serve').classList.contains('hidden') ? 'admin' : 'serve';
-  doLookupForTarget(val, activeTab === 'serve' ? 'serveLookupResults' : 'adminLookupResults', true);
+  doLookupForTarget(val, activeTab === 'serve' ? 'serveLookupResults' : 'adminLookupResults', activeTab === 'serve');
 }
 
-async function doLookupForTarget(queryVal, targetContainerId, isFromScanner = false){
+async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter = false){
   const results = document.getElementById(targetContainerId);
   if(!results) return;
   results.innerHTML = '<div class="card"><div class="empty">Searching…</div></div>';
@@ -1341,18 +1337,18 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromScanner = fa
     return;
   }
   results.innerHTML='';
-  matches.forEach(b=> renderLookupCard(results, b, isFromScanner));
+  matches.forEach(b=> renderLookupCard(results, b, isFromFoodCounter));
 }
 
-function renderLookupCard(container, b, isFromScanner = false){
+function renderLookupCard(container, b, isFromFoodCounter = false){
   const div = document.createElement('div');
   div.className = 'lookup-card';
   div.id = 'lc_'+b.orderId;
   container.appendChild(div);
-  paintLookupCard(b, isFromScanner);
+  paintLookupCard(b, isFromFoodCounter);
 }
 
-function paintLookupCard(b, isFromScanner = false){
+function paintLookupCard(b, isFromFoodCounter = false){
   const div = document.getElementById('lc_'+b.orderId);
   if(!div) return;
   const isVerified = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
@@ -1384,7 +1380,7 @@ function paintLookupCard(b, isFromScanner = false){
           <div class="dr-sub">${it.delivered}/${it.qty} Served</div>
         </div>
         <div class="deliver-actions">
-          ${isVerified && hasUnserved ? `
+          ${isFromFoodCounter && isVerified && hasUnserved ? `
             <button class="btn btn-primary" style="padding:6px 12px; font-size:12px;" onclick="deliverMeal('${b.orderId}', ${idx})">Serve 1 Meal</button>
           ` : `
             <span class="dr-progress">${it.delivered}/${it.qty}</span>
@@ -1393,7 +1389,7 @@ function paintLookupCard(b, isFromScanner = false){
       </div>`;
     }).join('')}
 
-    ${b.paymentStatus==='pending' ? `
+    ${!isFromFoodCounter && b.paymentStatus==='pending' ? `
       <div class="field" style="margin-top:10px;">
         <label>UTR / reference number ${b.paymentMethod==='cash'?'(not required for cash)':''}</label>
         <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="${b.paymentMethod==='cash'?'Optional':'Required for UPI verification'}" maxlength="12">
@@ -1426,8 +1422,12 @@ async function markVerified(orderId){
   b.paymentStatus = 'verified';
   b.verifiedAt = Date.now();
   await saveBooking(b);
+  
+  // Re-paint admin lookup result card if displayed
   paintLookupCard(b, false);
-  loadPendingPayments();
+  
+  // Instantly refresh the pending payments queue
+  await loadPendingPayments();
   generateReports();
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
@@ -1553,9 +1553,8 @@ async function toggleCamera(){
   const msg = document.getElementById('camMsg');
   msg.innerHTML='';
   try{
-    camStream = await navigator.mediaDevices.getUserMedia({ 
-      video: { facingMode: { ideal: "environment" } } 
-    });
+    const constraints = { video: { facingMode: { ideal: "environment" } } };
+    camStream = await navigator.mediaDevices.getUserMedia(constraints);
     const video = document.getElementById('camVideo');
     video.setAttribute("playsinline", true);
     video.setAttribute("muted", true);
