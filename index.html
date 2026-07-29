@@ -531,7 +531,7 @@
       <p class="section-label">⌨️ Or Look Up Booking Manually</p>
       <div class="search-row">
         <input type="text" id="lookupInput" placeholder="Order ID or 10-digit phone">
-        <button class="btn btn-primary" onclick="doLookup(true)">Find</button>
+        <button class="btn btn-primary" onclick="doLookupDirect('lookupInput')">Find</button>
       </div>
     </div>
 
@@ -1309,6 +1309,12 @@ function parseQrPayload(raw){
   return { orderId: raw, day:null, meal:null, name:null };
 }
 
+function doLookupDirect(inputId) {
+  const val = document.getElementById(inputId).value.trim();
+  document.getElementById('lookupInput').value = val;
+  doLookup(true);
+}
+
 async function doLookup(isFromScanner = false){
   const q = document.getElementById('lookupInput').value.trim();
   const results = document.getElementById('lookupResults');
@@ -1357,7 +1363,7 @@ function paintLookupCard(b, isFromScanner = false){
 
     ${!isVerified ? `
       <div class="note alert" style="margin-top:0; margin-bottom:12px;">
-        ⚠️ <strong>Payment Unverified</strong>: Verify payment in Committee Admin tab before serving meals.
+        ⚠️ <strong>Payment Unverified</strong>: Verify payment in Committee tab before serving meals.
       </div>
     ` : ''}
 
@@ -1419,6 +1425,19 @@ async function markVerified(orderId){
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
 
+async function reviewPendingPayment(orderId) {
+  // Ensure committee lookup receives and renders this order ID properly
+  const results = document.getElementById('lookupResults');
+  results.innerHTML = '<div class="card"><div class="empty">Loading order...</div></div>';
+  const b = await fetchBooking(orderId);
+  if (b) {
+    results.innerHTML = '';
+    renderLookupCard(results, b, false);
+    const cardEl = document.getElementById('lc_' + orderId);
+    if(cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
 async function loadPendingPayments(){
   const wrap = document.getElementById('pendingList');
   wrap.innerHTML = '<div class="empty">Loading…</div>';
@@ -1436,7 +1455,7 @@ async function loadPendingPayments(){
           <div class="dr-meal">${escapeHtml(b.name)} · ₹${b.total}</div>
           <div class="dr-sub">${b.orderId} · ${b.phone} · ${methodTag}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
         </div>
-        <button class="btn btn-outline" onclick="document.getElementById('lookupInput').value='${b.orderId}'; doLookup(false); window.scrollTo({top:0,behavior:'smooth'});">Review</button>
+        <button class="btn btn-outline" onclick="reviewPendingPayment('${b.orderId}')">Review</button>
       `;
       wrap.appendChild(row);
     });
@@ -1494,7 +1513,6 @@ async function exportBookingsCSV() {
     all.forEach(b => {
       const created = new Date(b.createdAt).toLocaleString();
       
-      // Build meal selection summary
       let totalBookedPlates = 0;
       let totalServedPlates = 0;
       const mealDetails = (b.items || []).map(it => {
@@ -1528,8 +1546,8 @@ async function toggleCamera(){
   const msg = document.getElementById('camMsg');
   msg.innerHTML='';
   try{
-    camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ exact: 'environment' } } }).catch(() => {
-      return navigator.mediaDevices.getUserMedia({ video: true });
+    camStream = await navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: { ideal: "environment" } } 
     });
     const video = document.getElementById('camVideo');
     video.srcObject = camStream;
@@ -1538,7 +1556,7 @@ async function toggleCamera(){
     btn.textContent = 'Stop Camera Scanner';
     scanLoop();
   }catch(e){
-    msg.innerHTML = '<div class="msg err">Could not access camera. Please allow camera permissions or use manual lookup.</div>';
+    msg.innerHTML = '<div class="msg err">Could not access camera. Please grant camera permissions or try manual lookup.</div>';
   }
 }
 
@@ -1594,7 +1612,7 @@ function scanLoop(){
       canvas.width = video.videoWidth || 320;
       canvas.height = video.videoHeight || 240;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const img = ctx.getImageData(0,0,canvas.width,canvas.height);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
       
       if(code && code.data){
