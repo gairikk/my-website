@@ -6,8 +6,13 @@
 <title>Bhog Bela — Durga Puja Food Coupons</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- QR Code Generator Library -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+
+<!-- FIXED: Working jsQR CDN Links (jsDelivr with UNPKG fallback) -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/jsqr@1.4.0/dist/jsQR.js';"></script>
+
 <style>
   :root{
     --maroon:#7A1220;
@@ -1548,8 +1553,9 @@ async function toggleCamera(){
   const msg = document.getElementById('camMsg');
   msg.innerHTML='';
   try{
-    const constraints = { video: { facingMode: { ideal: "environment" } } };
-    camStream = await navigator.mediaDevices.getUserMedia(constraints);
+    camStream = await navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: { ideal: "environment" } } 
+    });
     const video = document.getElementById('camVideo');
     video.setAttribute("playsinline", true);
     video.setAttribute("muted", true);
