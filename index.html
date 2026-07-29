@@ -35,6 +35,19 @@
   h1,h2,h3,.display{font-family:'Baloo 2',cursive;}
   .hidden{display:none !important;}
 
+  /* ---------- Toast ---------- */
+  .toast{
+    position:fixed; top:14px; left:50%; transform:translate(-50%,-140%);
+    background:var(--maroon-dark); color:#fff;
+    padding:12px 18px; border-radius:12px; font-size:14px; font-weight:600;
+    box-shadow:0 8px 24px rgba(43,15,15,0.35);
+    z-index:100; max-width:90vw; text-align:center;
+    opacity:0; transition:transform .35s ease, opacity .35s ease;
+  }
+  .toast.show{ transform:translate(-50%,0); opacity:1; }
+  .toast.good{ background:var(--green); }
+  .toast.warn{ background:var(--marigold); }
+
   /* ---------- Header / Hero ---------- */
   .hero{
     background:
@@ -300,10 +313,9 @@
     background-color:var(--maroon-dark);
   }
   .ticket-body{padding:16px;}
-  .qr-wrap{display:flex;justify-content:center;margin:6px 0 12px;}
-  .qr-wrap img, .qr-wrap canvas{border-radius:10px;border:6px solid #fff;box-shadow:0 0 0 1.5px var(--line);}
   .ticket-name{text-align:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:17px;}
-  .ticket-phone{text-align:center;font-size:12.5px;color:#8a6a55;margin-bottom:10px;}
+  .ticket-phone{text-align:center;font-size:12.5px;color:#8a6a55;margin-bottom:4px;}
+  .ticket-pay{text-align:center;font-size:11.5px;color:#8a6a55;margin-bottom:10px;}
   .ticket-item{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px dashed var(--line);gap:10px;}
   .ticket-item:last-child{border-bottom:none;}
   .ticket-item .lbl{color:var(--maroon-dark);font-weight:600;}
@@ -312,6 +324,25 @@
   .tag.veg{background:#E9F4E9;color:var(--green);}
   .tag.nonveg{background:#FBE6DA;color:#B4501D;}
   .tag.free{background:#DCEFDC;color:var(--green);}
+
+  /* per-meal QR blocks */
+  .qr-day-group{margin-top:14px;}
+  .qr-day-title{
+    font-family:'Baloo 2',cursive;font-weight:700;font-size:14.5px;color:var(--maroon);
+    margin-bottom:8px; padding-bottom:4px; border-bottom:1.5px solid var(--line);
+  }
+  .meal-qr-card{
+    border:1.5px solid var(--line); border-radius:12px; padding:10px; margin-bottom:8px;
+  }
+  .meal-qr-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px;}
+  .meal-qr-head .lbl{font-weight:700;color:var(--maroon-dark);}
+  .meal-qr-head .val{font-size:11.5px;color:#8a6a55;}
+  .qr-wrap{display:flex;justify-content:center;margin:4px 0;}
+  .qr-wrap img, .qr-wrap canvas{border-radius:8px;border:5px solid #fff;box-shadow:0 0 0 1.5px var(--line);}
+  .qr-locked{
+    text-align:center;font-size:12px;color:#8a6a55;background:#FBF3E4;
+    border-radius:8px;padding:14px 8px;
+  }
 
   /* committee & reports */
   .pin-pad{display:flex;gap:8px;margin-top:10px;}
@@ -360,7 +391,7 @@
 <div class="hero">
   <div class="hero-eyebrow">Bhog Bela · Food Coupon Booking</div>
   <h1>🪔 Shubho Durga Puja</h1>
-  <p class="sub">Book breakfast, lunch &amp; dinner coupons for all four days of the pujo — choose veg or non-veg, pay by UPI, get a QR coupon.</p>
+  <p class="sub">Book breakfast, lunch &amp; dinner coupons for all four days of the pujo — choose veg or non-veg, pay by cash or UPI, get a QR coupon per meal.</p>
   <div class="garland">
     <svg viewBox="0 0 400 20" preserveAspectRatio="none">
       <path d="M0,4 Q10,20 20,4 Q30,20 40,4 Q50,20 60,4 Q70,20 80,4 Q90,20 100,4 Q110,20 120,4 Q130,20 140,4 Q150,20 160,4 Q170,20 180,4 Q190,20 200,4 Q210,20 220,4 Q230,20 240,4 Q250,20 260,4 Q270,20 280,4 Q290,20 300,4 Q310,20 320,4 Q330,20 340,4 Q350,20 360,4 Q370,20 380,4 Q390,20 400,4" fill="none" stroke="#E8792D" stroke-width="1.5" opacity="0.6"/>
@@ -385,14 +416,18 @@
     <div id="bookForm">
       <div class="card">
         <p class="section-label"><span class="num">1</span>Your details</p>
+        <div class="field">
+          <label for="userName">Full name</label>
+          <input type="text" id="userName" placeholder="e.g. Ritwik Sen" autocomplete="name">
+        </div>
         <div class="row2">
-          <div class="field">
-            <label for="userName">Full name</label>
-            <input type="text" id="userName" placeholder="e.g. Ritwik Sen" autocomplete="name">
-          </div>
           <div class="field">
             <label for="userPhone">Mobile number</label>
             <input type="tel" id="userPhone" placeholder="10-digit number" maxlength="10" autocomplete="tel">
+          </div>
+          <div class="field">
+            <label for="userFlat">Flat / House number</label>
+            <input type="text" id="userFlat" placeholder="e.g. B-204" autocomplete="off">
           </div>
         </div>
         <p style="margin:0;">
@@ -412,30 +447,43 @@
         <div class="summary-total"><span>Total payable</span><span id="grandTotalLbl">₹0</span></div>
 
         <div id="paidSection">
-          <div class="upi-box" style="margin-top:14px;">
-            <div style="font-size:13px;color:#8a6a55;">Scan with any UPI app, or tap the button on your phone</div>
-            <div id="upiQr"></div>
-            <div class="upi-id" id="upiIdLabel"></div>
-            <a class="btn btn-primary" style="display:inline-block;margin-top:10px;text-decoration:none;" id="upiPayLink" href="#">Pay via UPI app</a>
-          </div>
-
           <div class="field" style="margin-top:14px;">
-            <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
-              <input type="checkbox" id="paidConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;">
-              <span style="font-size:13.5px;">I have completed the UPI payment for ₹<span id="paidAmountLbl">0</span></span>
-            </label>
-          </div>
-
-          <!-- Mandatory UTR Field Section -->
-          <div id="utrContainer" class="hidden" style="margin-top:12px;">
-            <div class="field">
-              <label for="utrInput">12-Digit UPI UTR / Reference Number <span style="color:#8a1f1f;">*</span></label>
-              <input type="tel" id="utrInput" placeholder="Enter 12-digit UTR from payment app" maxlength="12" autocomplete="off">
-              <div id="utrHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Please enter exactly 12 numeric digits from your UPI transaction receipt.</div>
+            <label>How will you pay?</label>
+            <div class="variant-picker">
+              <div class="variant-btn" id="pmCash" onclick="setPaymentMethod('cash')"><span class="vt">💵 Cash</span></div>
+              <div class="variant-btn" id="pmUpi" onclick="setPaymentMethod('upi')"><span class="vt">📱 UPI</span></div>
             </div>
           </div>
 
-          <div class="note">Payments are collected directly by the puja committee's UPI ID. A volunteer verifies each payment against the committee's UPI statement (using your name / phone / UTR) and marks it "Verified" from the Committee tab. Your QR coupon is issued right away, marked <em>Payment pending</em> until then.</div>
+          <div id="upiFlow" class="hidden">
+            <div class="upi-box" style="margin-top:10px;">
+              <div style="font-size:13px;color:#8a6a55;">Scan with any UPI app, or tap the button on your phone</div>
+              <div id="upiQr"></div>
+              <div class="upi-id" id="upiIdLabel"></div>
+              <a class="btn btn-primary" style="display:inline-block;margin-top:10px;text-decoration:none;" id="upiPayLink" href="#">Pay via UPI app</a>
+            </div>
+
+            <div class="field" style="margin-top:14px;">
+              <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
+                <input type="checkbox" id="paidConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;">
+                <span style="font-size:13.5px;">I have completed the UPI payment for ₹<span id="paidAmountLbl">0</span></span>
+              </label>
+            </div>
+
+            <div id="utrContainer" class="hidden" style="margin-top:12px;">
+              <div class="field">
+                <label for="utrInput">12-Digit UPI UTR / Reference Number <span style="color:#8a1f1f;">*</span></label>
+                <input type="tel" id="utrInput" placeholder="Enter 12-digit UTR from payment app" maxlength="12" autocomplete="off">
+                <div id="utrHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Please enter exactly 12 numeric digits from your UPI transaction receipt.</div>
+              </div>
+            </div>
+
+            <div class="note">Payments are collected directly by the puja committee's UPI ID. A volunteer verifies each payment against the committee's UPI statement (using your name / phone / UTR) and marks it "Verified" from the Committee tab. Your QR coupons unlock automatically once that happens.</div>
+          </div>
+
+          <div id="cashFlow" class="hidden">
+            <div class="note alert" style="margin-top:10px;">💵 Please pay ₹<span id="cashAmountLbl">0</span> in cash to a committee volunteer at the booking desk or food counter. Your coupon will show "Payment Pending" — and your QR codes stay locked — until a volunteer confirms they've received the cash and marks it verified.</div>
+          </div>
         </div>
 
         <div id="freeSection" class="hidden">
@@ -503,7 +551,7 @@
       <div class="card">
         <p class="section-label">📊 Committee Reports &amp; Analytics</p>
         <button class="btn btn-outline btn-block" onclick="generateReports()">Refresh Analytics &amp; Reports</button>
-        
+
         <div class="stats-grid">
           <div class="stat-card">
             <div class="stat-val" id="statRevenue">₹0</div>
@@ -546,10 +594,22 @@
 <!-- ================= FIREBASE MODULE INITIALIZATION ================= -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { 
-    getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, onSnapshot 
+  import {
+    getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+  /*
+    SECURITY NOTE — read before publishing:
+    This apiKey is not a secret; Firebase is designed so it can sit in public
+    client code (it only identifies your project, it doesn't grant access).
+    "Encrypting" it here would do nothing real, since the browser must be able
+    to read it in plain text to call Firebase anyway.
+    Actual access control lives in TWO other places you must configure yourself:
+      1. Firestore → Rules (control who can read/write which documents)
+      2. Google Cloud Console → Credentials → this key → Application restrictions
+         (HTTP referrers) so it only works from your published domain(s)
+    See the chat response for exact rules + steps.
+  */
   const firebaseConfig = {
     apiKey: "AIzaSyDeVG7OZ-F0wASmhkFr6xRN5nNKceWSSzk",
     authDomain: "my-website-db-ee1d5.firebaseapp.com",
@@ -559,11 +619,9 @@
     appId: "1:583708778503:web:79f11419f19c488cea4aa2"
   };
 
-  // Initialize Firebase and Firestore Database
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  /* Helper functions mapping to Firestore */
   window.dbSetBooking = async function(booking) {
     const ref = doc(db, "bookings", booking.orderId);
     await setDoc(ref, booking);
@@ -575,7 +633,6 @@
     return snap.exists() ? snap.data() : null;
   };
 
-  /* REAL-TIME LISTENERS */
   window.dbListenToBooking = function(orderId, callback) {
     const ref = doc(db, "bookings", orderId.toUpperCase().trim());
     return onSnapshot(ref, (snap) => {
@@ -657,11 +714,12 @@ const CONFIG = {
 };
 
 /* ================= state ================= */
-let cart = {};           
+let cart = {};
 let activeDay = CONFIG.days[0].id;
 let lastBooking = null;
 let camStream = null, camLoopHandle = null;
 let ticketUnsubscribe = null;
+let selectedPaymentMethod = null;
 
 function cartKey(day, meal){ return day + '_' + meal; }
 function getRow(day, meal){
@@ -716,6 +774,20 @@ function playBeep() {
   } catch(e) {}
 }
 
+/* ================= toast ================= */
+function showToast(message, tone){
+  let el = document.getElementById('toastBanner');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'toastBanner';
+    document.body.appendChild(el);
+  }
+  el.textContent = message;
+  el.className = 'toast show ' + (tone || 'good');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=> el.classList.remove('show'), 4200);
+}
+
 /* ================= tabs ================= */
 function switchTab(tab){
   document.getElementById('view-book').classList.toggle('hidden', tab!=='book');
@@ -752,7 +824,6 @@ function renderMealRows(){
   wrap.innerHTML = '';
   CONFIG.meals.forEach(m=>{
     const row = getRow(activeDay, m.id);
-    const ov = dayOverride(activeDay, m.id);
     const info = effectiveInfo(activeDay, m.id, row.type);
     if(m.hasVariant) row.type = info.type;
 
@@ -857,12 +928,63 @@ function updateTotals(){
   document.getElementById('stickyBtn').style.opacity = itemCount()<=0 ? .5 : 1;
 }
 
+/* ================= payment method ================= */
+function setPaymentMethod(method){
+  selectedPaymentMethod = method;
+  document.getElementById('pmCash').classList.toggle('active', method==='cash');
+  document.getElementById('pmUpi').classList.toggle('active', method==='upi');
+  document.getElementById('upiFlow').classList.toggle('hidden', method!=='upi');
+  document.getElementById('cashFlow').classList.toggle('hidden', method!=='cash');
+  validateConfirmButtonState();
+}
+
+function validateConfirmButtonState(){
+  const confirmBtn = document.getElementById('confirmBookingBtn');
+  const total = grandTotal();
+  if(total === 0){ confirmBtn.disabled = false; return; }
+
+  if(selectedPaymentMethod === 'cash'){
+    document.getElementById('utrContainer').classList.add('hidden');
+    confirmBtn.disabled = false;
+    return;
+  }
+
+  if(selectedPaymentMethod === 'upi'){
+    const isChecked = document.getElementById('paidConfirm').checked;
+    const utrContainer = document.getElementById('utrContainer');
+    const utrInput = document.getElementById('utrInput');
+    const utrHelp = document.getElementById('utrHelpText');
+
+    if(isChecked){
+      utrContainer.classList.remove('hidden');
+      const utrVal = utrInput.value.trim();
+      const isValidUtr = /^\d{12}$/.test(utrVal);
+      utrHelp.classList.toggle('hidden', !(utrVal.length>0 && !isValidUtr));
+      confirmBtn.disabled = !isValidUtr;
+    } else {
+      utrContainer.classList.add('hidden');
+      confirmBtn.disabled = true;
+    }
+    return;
+  }
+
+  confirmBtn.disabled = true; // no method chosen yet
+}
+
+document.addEventListener('change', (e)=>{
+  if(e.target && e.target.id==='paidConfirm') validateConfirmButtonState();
+});
+document.addEventListener('input', (e)=>{
+  if(e.target && e.target.id==='utrInput') validateConfirmButtonState();
+});
+
 /* ================= review & payment ================= */
 function goToReview(){
   const name = document.getElementById('userName').value.trim();
   const phone = document.getElementById('userPhone').value.trim();
-  if(!name || !/^\d{10}$/.test(phone)){
-    alert('Please enter your name and a valid 10-digit mobile number.');
+  const flat = document.getElementById('userFlat').value.trim();
+  if(!name || !flat || !/^\d{10}$/.test(phone)){
+    alert('Please enter your name, flat/house number, and a valid 10-digit mobile number.');
     return;
   }
   if(itemCount()<=0){ alert('Please select at least one meal.'); return; }
@@ -885,6 +1007,7 @@ function goToReview(){
   const total = grandTotal();
   document.getElementById('grandTotalLbl').textContent = '₹'+total;
   document.getElementById('paidAmountLbl').textContent = total;
+  document.getElementById('cashAmountLbl').textContent = total;
 
   const paidSection = document.getElementById('paidSection');
   const freeSection = document.getElementById('freeSection');
@@ -893,14 +1016,19 @@ function goToReview(){
   if(total > 0){
     paidSection.classList.remove('hidden');
     freeSection.classList.add('hidden');
-    const name2 = name;
-    const upiLink = `upi://pay?pa=${encodeURIComponent(CONFIG.upiId)}&pn=${encodeURIComponent(CONFIG.upiName)}&am=${total}&cu=INR&tn=${encodeURIComponent('Durga Puja food coupons - '+name2)}`;
+
+    selectedPaymentMethod = null;
+    document.getElementById('pmCash').classList.remove('active');
+    document.getElementById('pmUpi').classList.remove('active');
+    document.getElementById('upiFlow').classList.add('hidden');
+    document.getElementById('cashFlow').classList.add('hidden');
+
+    const upiLink = `upi://pay?pa=${encodeURIComponent(CONFIG.upiId)}&pn=${encodeURIComponent(CONFIG.upiName)}&am=${total}&cu=INR&tn=${encodeURIComponent('Durga Puja food coupons - '+name)}`;
     document.getElementById('upiPayLink').href = upiLink;
     document.getElementById('upiIdLabel').textContent = CONFIG.upiId;
     document.getElementById('upiQr').innerHTML = '';
     new QRCode(document.getElementById('upiQr'), { text: upiLink, width:150, height:150, colorDark:'#4A0A12', colorLight:'#FFFFFF' });
-    
-    // Reset Checkbox and UTR inputs
+
     document.getElementById('paidConfirm').checked = false;
     document.getElementById('utrContainer').classList.add('hidden');
     document.getElementById('utrInput').value = '';
@@ -918,47 +1046,6 @@ function goToReview(){
   document.getElementById('reviewCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-/* MANDATORY CHECKBOX & 12-DIGIT UTR VALIDATION */
-function validateUtrAndConfirmState() {
-  const isChecked = document.getElementById('paidConfirm').checked;
-  const utrContainer = document.getElementById('utrContainer');
-  const utrInput = document.getElementById('utrInput');
-  const utrHelp = document.getElementById('utrHelpText');
-  const confirmBtn = document.getElementById('confirmBookingBtn');
-  const total = grandTotal();
-
-  if(total === 0) return; // Complimentary orders ignore this
-
-  if (isChecked) {
-    utrContainer.classList.remove('hidden');
-    const utrVal = utrInput.value.trim();
-    const isValidUtr = /^\d{12}$/.test(utrVal);
-
-    if (utrVal.length > 0 && !isValidUtr) {
-      utrHelp.classList.remove('hidden');
-    } else {
-      utrHelp.classList.add('hidden');
-    }
-
-    confirmBtn.disabled = !isValidUtr;
-  } else {
-    utrContainer.classList.add('hidden');
-    confirmBtn.disabled = true;
-  }
-}
-
-document.addEventListener('change', (e)=>{
-  if(e.target && e.target.id==='paidConfirm'){
-    validateUtrAndConfirmState();
-  }
-});
-
-document.addEventListener('input', (e)=>{
-  if(e.target && e.target.id==='utrInput'){
-    validateUtrAndConfirmState();
-  }
-});
-
 function genOrderId(){
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let s='DP26-';
@@ -969,13 +1056,19 @@ function genOrderId(){
 async function confirmBooking(){
   const name = document.getElementById('userName').value.trim();
   const phone = document.getElementById('userPhone').value.trim();
+  const flat = document.getElementById('userFlat').value.trim();
   const utrEl = document.getElementById('utrInput');
   const utr = utrEl ? utrEl.value.trim() : '';
   const total = grandTotal();
 
-  if(total > 0 && !/^\d{12}$/.test(utr)) {
-    alert('Please enter a valid 12-digit UPI UTR number.');
-    return;
+  let paymentMethod = 'complimentary';
+  if(total > 0){
+    if(!selectedPaymentMethod){ alert('Please choose Cash or UPI.'); return; }
+    paymentMethod = selectedPaymentMethod;
+    if(paymentMethod === 'upi' && !/^\d{12}$/.test(utr)){
+      alert('Please enter a valid 12-digit UPI UTR number.');
+      return;
+    }
   }
 
   const items = [];
@@ -997,9 +1090,10 @@ async function confirmBooking(){
 
   const orderId = genOrderId();
   const booking = {
-    orderId, name, phone, items,
+    orderId, name, phone, flatNumber: flat, items,
     total,
-    utr: utr || null,
+    paymentMethod,
+    utr: (paymentMethod==='upi') ? (utr || null) : null,
     paymentStatus: total>0 ? 'pending' : 'complimentary',
     createdAt: Date.now(),
     verifiedAt: null
@@ -1021,6 +1115,12 @@ async function confirmBooking(){
     document.getElementById('ticketView').classList.remove('hidden');
     refreshStickyVisibility();
     window.scrollTo({top:0, behavior:'smooth'});
+
+    if(booking.paymentStatus === 'pending'){
+      showToast('✅ Successfully booked! Verification Pending', 'warn');
+    } else {
+      showToast('🎁 Successfully booked! Your bhog is confirmed.', 'good');
+    }
   }catch(err){
     console.error(err);
     alert('Could not save your booking — please check your connection and try again.');
@@ -1028,21 +1128,63 @@ async function confirmBooking(){
   }
 }
 
-/* ================= ticket rendering ================= */
+/* ================= ticket rendering (per-meal QR) ================= */
 function statusLabel(status){
   if(status==='verified') return '✓ Payment verified';
   if(status==='complimentary') return '🎁 Complimentary — no payment required';
   return '⏳ Payment pending verification';
 }
+function paymentMethodLabel(b){
+  if(b.paymentMethod==='cash') return '💵 Paying by cash';
+  if(b.paymentMethod==='upi') return '📱 Paid via UPI' + (b.utr?(' · UTR '+b.utr):'');
+  return '';
+}
 
-function itemLine(it){
-  const typeTag = it.type ? `<span class="tag ${it.type==='veg'?'veg':'nonveg'}">${it.type==='veg'?'Veg':'Non-veg'}</span>` : '';
-  const freeTag = it.complimentary ? `<span class="tag free">FREE</span>` : '';
-  return `
-    <div class="ticket-item">
-      <span class="lbl">${it.dayLabel} · ${it.mealLabel}${typeTag}${freeTag}</span>
-      <span class="val">${it.delivered}/${it.qty} served (${it.qty} booked)</span>
-    </div>`;
+function mealQrPayload(b, it){
+  return `${b.orderId}|${it.day}|${it.meal}|${b.name}`;
+}
+
+function renderBookingMealsHtml(b){
+  const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
+  const byDay = {};
+  b.items.forEach(it=>{
+    if(!byDay[it.day]) byDay[it.day] = { label: it.dayLabel, items: [] };
+    byDay[it.day].items.push(it);
+  });
+  let html = '';
+  Object.keys(byDay).forEach(dayId=>{
+    html += `<div class="qr-day-group"><div class="qr-day-title">${byDay[dayId].label}</div>`;
+    byDay[dayId].items.forEach(it=>{
+      const typeTag = it.type ? `<span class="tag ${it.type==='veg'?'veg':'nonveg'}">${it.type==='veg'?'Veg':'Non-veg'}</span>` : '';
+      const freeTag = it.complimentary ? `<span class="tag free">FREE</span>` : '';
+      const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
+      html += `
+        <div class="meal-qr-card">
+          <div class="meal-qr-head">
+            <span class="lbl">${it.mealLabel}${typeTag}${freeTag}</span>
+            <span class="val">${it.delivered}/${it.qty} served</span>
+          </div>
+          ${isUnlocked
+            ? `<div class="qr-wrap" id="${qid}"></div>`
+            : `<div class="qr-locked">🔒 Unlocks automatically once payment is verified</div>`}
+        </div>`;
+    });
+    html += `</div>`;
+  });
+  return html;
+}
+
+function mountMealQrCodes(b){
+  const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
+  if(!isUnlocked) return;
+  b.items.forEach(it=>{
+    const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
+    const el = document.getElementById(qid);
+    if(el){
+      el.innerHTML = '';
+      new QRCode(el, { text: mealQrPayload(b,it), width:140, height:140, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
+    }
+  });
 }
 
 function renderTicket(b){
@@ -1056,26 +1198,25 @@ function renderTicket(b){
       </div>
       <div class="perf"></div>
       <div class="ticket-body">
-        <div class="qr-wrap" id="qrHolder"></div>
         <div class="ticket-name">${escapeHtml(b.name)}</div>
-        <div class="ticket-phone">${b.phone}</div>
-        ${b.utr ? `<div style="text-align:center; font-size:12px; color:#8a6a55; margin-bottom:8px;">UTR: ${escapeHtml(b.utr)}</div>` : ''}
-        ${b.items.map(itemLine).join('')}
-        <div class="ticket-item"><span class="lbl">Total ${b.total>0?'paid':''}</span><span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span></div>
+        <div class="ticket-phone">${b.phone}${b.flatNumber?' · Flat '+escapeHtml(b.flatNumber):''}</div>
+        <div class="ticket-pay">${paymentMethodLabel(b)}</div>
+        ${renderBookingMealsHtml(b)}
+        <div class="ticket-item" style="margin-top:6px;"><span class="lbl">Total ${b.total>0?'payable':''}</span><span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span></div>
       </div>
     </div>
-    <div class="note">Show this QR code at the food counter. Food is served strictly upon QR scan by a volunteer.</div>
+    <div class="note">Each meal has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
     <button class="btn btn-outline btn-block" onclick="startOver()">Book more coupons</button>
   `;
-  document.getElementById('qrHolder').innerHTML = '';
-  new QRCode(document.getElementById('qrHolder'), { text: b.orderId, width:180, height:180, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
+  mountMealQrCodes(b);
 }
 
 function startOver(){
   if(ticketUnsubscribe) ticketUnsubscribe();
-  cart = {}; lastBooking = null;
+  cart = {}; lastBooking = null; selectedPaymentMethod = null;
   document.getElementById('userName').value='';
   document.getElementById('userPhone').value='';
+  document.getElementById('userFlat').value='';
   if(document.getElementById('utrInput')) document.getElementById('utrInput').value='';
   if(document.getElementById('paidConfirm')) document.getElementById('paidConfirm').checked = false;
   document.getElementById('confirmBookingBtn').disabled = true;
@@ -1134,21 +1275,12 @@ function renderMiniTicketInto(container, b){
     </div>
     <div class="perf"></div>
     <div class="ticket-body">
-      <div class="qr-wrap" id="qr_${b.orderId}"></div>
       <div class="ticket-name">${escapeHtml(b.name)}</div>
-      <div class="ticket-phone">${b.phone}</div>
-      ${b.utr ? `<div style="text-align:center; font-size:12px; color:#8a6a55; margin-bottom:8px;">UTR: ${escapeHtml(b.utr)}</div>` : ''}
-      ${b.items.map(it=>{
-        const typeTag = it.type ? `<span class="tag ${it.type==='veg'?'veg':'nonveg'}">${it.type==='veg'?'Veg':'Non-veg'}</span>` : '';
-        const freeTag = it.complimentary ? `<span class="tag free">FREE</span>` : '';
-        return `
-        <div class="ticket-item">
-          <span class="lbl">${it.dayLabel} · ${it.mealLabel}${typeTag}${freeTag}</span>
-          <span class="val">${it.delivered}/${it.qty} served</span>
-        </div>`;
-      }).join('')}
+      <div class="ticket-phone">${b.phone}${b.flatNumber?' · Flat '+escapeHtml(b.flatNumber):''}</div>
+      <div class="ticket-pay">${paymentMethodLabel(b)}</div>
+      ${renderBookingMealsHtml(b)}
     </div>`;
-  new QRCode(document.getElementById('qr_'+b.orderId), { text: b.orderId, width:150, height:150, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
+  mountMealQrCodes(b);
 }
 
 /* ================= COMMITTEE ================= */
@@ -1159,7 +1291,7 @@ function checkPin(){
     document.getElementById('pinGate').classList.add('hidden');
     document.getElementById('committeePanel').classList.remove('hidden');
     msg.innerHTML='';
-    generateReports(); 
+    generateReports();
   }else{
     msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
   }
@@ -1170,9 +1302,17 @@ async function fetchBooking(orderId){
     return await window.dbGetBooking(orderId);
   }catch(e){ return null; }
 }
-
 async function saveBooking(b){
   await window.dbSetBooking(b);
+}
+
+/* Parse a scanned QR: "orderId|day|meal|name" (per-meal) or plain orderId (legacy) */
+function parseQrPayload(raw){
+  const parts = String(raw).split('|');
+  if(parts.length>=3){
+    return { orderId: parts[0], day: parts[1], meal: parts[2], name: parts.slice(3).join('|') || null };
+  }
+  return { orderId: raw, day:null, meal:null, name:null };
 }
 
 async function doLookup(isFromScanner = false){
@@ -1210,12 +1350,13 @@ function paintLookupCard(b, isFromScanner = false){
   if(!div) return;
   const isVerified = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
   const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
+  const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
 
   div.innerHTML = `
     <div class="lc-head">
       <div>
         <div class="lc-name">${escapeHtml(b.name)}</div>
-        <div class="lc-oid">${b.orderId} · ${b.phone}</div>
+        <div class="lc-oid">${b.orderId} · ${b.phone}${b.flatNumber?' · Flat '+escapeHtml(b.flatNumber):''}${methodTag?' · '+methodTag:''}</div>
       </div>
       <span class="pay-badge ${b.paymentStatus}">${badgeText}</span>
     </div>
@@ -1247,8 +1388,8 @@ function paintLookupCard(b, isFromScanner = false){
 
     ${b.paymentStatus==='pending' ? `
       <div class="field" style="margin-top:10px;">
-        <label>UTR / reference number</label>
-        <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="Required for verification" maxlength="12">
+        <label>UTR / reference number ${b.paymentMethod==='cash'?'(not required for cash)':''}</label>
+        <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="${b.paymentMethod==='cash'?'Optional':'Required for UPI verification'}" maxlength="12">
       </div>
       <button class="btn btn-primary btn-block verify-btn" onclick="markVerified('${b.orderId}')">Mark Payment Verified</button>
     ` : ''}
@@ -1292,10 +1433,11 @@ async function loadPendingPayments(){
     pending.forEach(b=>{
       const row = document.createElement('div');
       row.className='deliver-row';
+      const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
       row.innerHTML = `
         <div class="dr-info">
           <div class="dr-meal">${escapeHtml(b.name)} · ₹${b.total}</div>
-          <div class="dr-sub">${b.orderId} · ${b.phone}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
+          <div class="dr-sub">${b.orderId} · ${b.phone} · ${methodTag}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
         </div>
         <button class="btn btn-outline" onclick="document.getElementById('lookupInput').value='${b.orderId}'; doLookup(false); window.scrollTo({top:0,behavior:'smooth'});">Review</button>
       `;
@@ -1350,10 +1492,10 @@ async function exportBookingsCSV() {
     const all = await window.dbGetAllBookings();
     if(all.length === 0) { alert('No data to export.'); return; }
 
-    let csv = 'Order ID,Name,Phone,Total (INR),Payment Status,UTR,Created At\n';
+    let csv = 'Order ID,Name,Phone,Flat,Payment Method,Total (INR),Payment Status,UTR,Created At\n';
     all.forEach(b => {
       const created = new Date(b.createdAt).toLocaleString();
-      csv += `"${b.orderId}","${b.name}","${b.phone}",${b.total},"${b.paymentStatus}","${b.utr||''}","${created}"\n`;
+      csv += `"${b.orderId}","${b.name}","${b.phone}","${b.flatNumber||''}","${b.paymentMethod||''}",${b.total},"${b.paymentStatus}","${b.utr||''}","${created}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -1396,6 +1538,38 @@ function stopCamera(){
   if(btn) btn.textContent = 'Start camera scanner';
 }
 
+async function handleMealScan(orderId, day, meal){
+  const msg = document.getElementById('camMsg');
+  const b = await fetchBooking(orderId);
+  if(!b){ msg.innerHTML = '<div class="msg err">No booking found for this QR.</div>'; return; }
+
+  const idx = b.items.findIndex(it=>it.day===day && it.meal===meal);
+  if(idx===-1){ msg.innerHTML = '<div class="msg err">This QR does not match any item in the booking.</div>'; return; }
+  const it = b.items[idx];
+
+  if(b.paymentStatus === 'pending'){
+    msg.innerHTML = `<div class="msg err">⚠️ Payment not verified yet for ${escapeHtml(b.name)}. Verify payment first.</div>`;
+    document.getElementById('lookupInput').value = orderId;
+    doLookup(false);
+    return;
+  }
+  if(it.delivered >= it.qty){
+    msg.innerHTML = `<div class="msg err">Already fully served: ${escapeHtml(b.name)} — ${it.dayLabel} ${it.mealLabel} (${it.delivered}/${it.qty}).</div>`;
+    document.getElementById('lookupInput').value = orderId;
+    doLookup(true);
+    return;
+  }
+
+  it.delivered += 1;
+  await saveBooking(b);
+  playBeep();
+  const typeTxt = it.type ? (it.type==='veg'?'Veg':'Non-veg') : '';
+  msg.innerHTML = `<div class="msg ok">✅ Served ${escapeHtml(b.name)}${b.flatNumber?' (Flat '+escapeHtml(b.flatNumber)+')':''} — ${it.dayLabel} ${it.mealLabel} ${typeTxt}: ${it.delivered}/${it.qty}</div>`;
+  document.getElementById('lookupInput').value = orderId;
+  doLookup(true);
+  generateReports();
+}
+
 function scanLoop(){
   const video = document.getElementById('camVideo');
   const canvas = document.getElementById('camCanvas');
@@ -1409,12 +1583,16 @@ function scanLoop(){
       const img = ctx.getImageData(0,0,canvas.width,canvas.height);
       const code = jsQR(img.data, img.width, img.height);
       if(code && code.data){
-        playBeep();
         document.getElementById('camMsg').innerHTML = `<div class="msg ok">Scanned: ${escapeHtml(code.data)}</div>`;
-        document.getElementById('lookupInput').value = code.data;
+        const payload = parseQrPayload(code.data);
         stopCamera();
-        doLookup(true);
         window.scrollTo({top:0, behavior:'smooth'});
+        if(payload.day && payload.meal){
+          handleMealScan(payload.orderId, payload.day, payload.meal);
+        } else {
+          document.getElementById('lookupInput').value = payload.orderId;
+          doLookup(true);
+        }
         return;
       }
     }
