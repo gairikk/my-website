@@ -55,7 +55,7 @@
       radial-gradient(circle at 90% 0%, rgba(232,121,45,0.30), transparent 45%),
       linear-gradient(160deg, var(--maroon) 0%, var(--maroon-dark) 100%);
     color:var(--ivory);
-    padding:22px 20px 26px;
+    padding:22px 16px 26px;
     position:relative;
     overflow:hidden;
   }
@@ -68,7 +68,7 @@
   }
   .hero h1{
     margin:4px 0 6px;
-    font-size:30px;
+    font-size:28px;
     font-weight:800;
     color:#fff;
     display:flex;
@@ -78,7 +78,7 @@
   .hero p.sub{
     margin:0;
     color:rgba(251,243,228,0.85);
-    font-size:14.5px;
+    font-size:14px;
     max-width:34ch;
   }
   .garland{
@@ -90,7 +90,7 @@
 
   .tabs{
     display:flex;
-    gap:6px;
+    gap:4px;
     margin-top:16px;
   }
   .tab-btn{
@@ -98,12 +98,14 @@
     border:1px solid rgba(251,243,228,0.35);
     background:rgba(251,243,228,0.08);
     color:var(--ivory);
-    padding:9px 6px;
+    padding:8px 4px;
     border-radius:999px;
     font-family:'Hind Siliguri',sans-serif;
     font-weight:600;
-    font-size:13.5px;
+    font-size:12.5px;
     cursor:pointer;
+    text-align:center;
+    white-space:nowrap;
   }
   .tab-btn.active{
     background:var(--gold);
@@ -350,8 +352,8 @@
   .search-row{display:flex;gap:8px;}
   .search-row input{flex:1;}
   .cam-box{position:relative;border-radius:14px;overflow:hidden;background:#000;margin-top:10px;}
-  .cam-box video{width:100%;display:block;}
-  .cam-frame{position:absolute;inset:12%;border:2.5px solid var(--marigold);border-radius:12px;pointer-events:none;}
+  .cam-box video{width:100%; height:260px; object-fit:cover; display:block;}
+  .cam-frame{position:absolute;inset:15%;border:2.5px solid var(--marigold);border-radius:12px;pointer-events:none;}
   .lookup-card{border:1.5px solid var(--line);border-radius:14px;padding:14px;margin-top:12px;}
   .lc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;gap:8px;}
   .lc-name{font-family:'Baloo 2',cursive;font-weight:700;font-size:16px;}
@@ -403,8 +405,9 @@
     </svg>
   </div>
   <div class="tabs">
-    <button class="tab-btn active" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book Coupons</button>
-    <button class="tab-btn" id="tabCommitteeBtn" onclick="switchTab('committee')">🧾 Committee</button>
+    <button class="tab-btn active" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book</button>
+    <button class="tab-btn" id="tabServeBtn" onclick="switchTab('serve')">🍽️ Food Counter</button>
+    <button class="tab-btn" id="tabCommitteeBtn" onclick="switchTab('committee')">🧾 Committee Admin</button>
   </div>
 </div>
 
@@ -511,11 +514,35 @@
     </div>
   </div>
 
-  <!-- ================= COMMITTEE TAB ================= -->
+  <!-- ================= FOOD COUNTER / SERVE TAB ================= -->
+  <div id="view-serve" class="hidden">
+    <div class="card">
+      <p class="section-label">📷 Food Counter QR Scanner</p>
+      <button class="btn btn-primary btn-block" id="camToggleBtn" onclick="toggleCamera()">Start Camera Scanner</button>
+      <div class="cam-box hidden" id="camBox">
+        <video id="camVideo" playsinline muted></video>
+        <div class="cam-frame"></div>
+      </div>
+      <canvas id="camCanvas" class="hidden"></canvas>
+      <div id="camMsg"></div>
+    </div>
+
+    <div class="card">
+      <p class="section-label">⌨️ Or Look Up Booking Manually</p>
+      <div class="search-row">
+        <input type="text" id="lookupInput" placeholder="Order ID or 10-digit phone">
+        <button class="btn btn-primary" onclick="doLookup(true)">Find</button>
+      </div>
+    </div>
+
+    <div id="lookupResults"></div>
+  </div>
+
+  <!-- ================= COMMITTEE ADMIN TAB ================= -->
   <div id="view-committee" class="hidden">
 
     <div id="pinGate" class="card">
-      <p class="section-label">🔐 Committee access</p>
+      <p class="section-label">🔐 Committee Admin Access</p>
       <p style="font-size:13.5px;color:#6b4a3a;">Enter the volunteer PIN shared by your booth coordinator.</p>
       <div class="pin-pad">
         <input type="tel" id="pinInput" maxlength="6" placeholder="••••">
@@ -525,28 +552,6 @@
     </div>
 
     <div id="committeePanel" class="hidden">
-
-      <div class="card">
-        <p class="section-label">📷 Scan QR to Distribute Food</p>
-        <button class="btn btn-outline btn-block" id="camToggleBtn" onclick="toggleCamera()">Start camera scanner</button>
-        <div class="cam-box hidden" id="camBox">
-          <video id="camVideo" playsinline muted></video>
-          <div class="cam-frame"></div>
-        </div>
-        <canvas id="camCanvas" class="hidden"></canvas>
-        <div id="camMsg"></div>
-      </div>
-
-      <div class="card">
-        <p class="section-label">⌨️ Or look up manually</p>
-        <div class="search-row">
-          <input type="text" id="lookupInput" placeholder="Order ID or 10-digit phone">
-          <button class="btn btn-primary" onclick="doLookup(false)">Find</button>
-        </div>
-      </div>
-
-      <div id="lookupResults"></div>
-
       <!-- Real-time Committee Reports & Analytics -->
       <div class="card">
         <p class="section-label">📊 Committee Reports &amp; Analytics</p>
@@ -577,7 +582,7 @@
       </div>
 
       <div class="card">
-        <p class="section-label">💰 Pending payment verifications</p>
+        <p class="section-label">💰 Pending Payment Verifications</p>
         <button class="btn btn-outline btn-block" onclick="loadPendingPayments()">Refresh list</button>
         <div id="pendingList"></div>
       </div>
@@ -598,18 +603,6 @@
     getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  /*
-    SECURITY NOTE — read before publishing:
-    This apiKey is not a secret; Firebase is designed so it can sit in public
-    client code (it only identifies your project, it doesn't grant access).
-    "Encrypting" it here would do nothing real, since the browser must be able
-    to read it in plain text to call Firebase anyway.
-    Actual access control lives in TWO other places you must configure yourself:
-      1. Firestore → Rules (control who can read/write which documents)
-      2. Google Cloud Console → Credentials → this key → Application restrictions
-         (HTTP referrers) so it only works from your published domain(s)
-    See the chat response for exact rules + steps.
-  */
   const firebaseConfig = {
     apiKey: "AIzaSyDeVG7OZ-F0wASmhkFr6xRN5nNKceWSSzk",
     authDomain: "my-website-db-ee1d5.firebaseapp.com",
@@ -791,11 +784,13 @@ function showToast(message, tone){
 /* ================= tabs ================= */
 function switchTab(tab){
   document.getElementById('view-book').classList.toggle('hidden', tab!=='book');
+  document.getElementById('view-serve').classList.toggle('hidden', tab!=='serve');
   document.getElementById('view-committee').classList.toggle('hidden', tab!=='committee');
   document.getElementById('tabBookBtn').classList.toggle('active', tab==='book');
+  document.getElementById('tabServeBtn').classList.toggle('active', tab==='serve');
   document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
   refreshStickyVisibility();
-  if(tab==='committee') stopCamera();
+  if(tab!=='serve') stopCamera();
 }
 
 function refreshStickyVisibility(){
@@ -968,7 +963,7 @@ function validateConfirmButtonState(){
     return;
   }
 
-  confirmBtn.disabled = true; // no method chosen yet
+  confirmBtn.disabled = true;
 }
 
 document.addEventListener('change', (e)=>{
@@ -1283,7 +1278,7 @@ function renderMiniTicketInto(container, b){
   mountMealQrCodes(b);
 }
 
-/* ================= COMMITTEE ================= */
+/* ================= COMMITTEE ADMIN & SERVING ================= */
 function checkPin(){
   const v = document.getElementById('pinInput').value.trim();
   const msg = document.getElementById('pinMsg');
@@ -1306,7 +1301,6 @@ async function saveBooking(b){
   await window.dbSetBooking(b);
 }
 
-/* Parse a scanned QR: "orderId|day|meal|name" (per-meal) or plain orderId (legacy) */
 function parseQrPayload(raw){
   const parts = String(raw).split('|');
   if(parts.length>=3){
@@ -1363,7 +1357,7 @@ function paintLookupCard(b, isFromScanner = false){
 
     ${!isVerified ? `
       <div class="note alert" style="margin-top:0; margin-bottom:12px;">
-        ⚠️ <strong>Payment Unverified</strong>: Verify payment below before serving meals.
+        ⚠️ <strong>Payment Unverified</strong>: Verify payment in Committee Admin tab before serving meals.
       </div>
     ` : ''}
 
@@ -1377,7 +1371,7 @@ function paintLookupCard(b, isFromScanner = false){
           <div class="dr-sub">${it.delivered}/${it.qty} Served</div>
         </div>
         <div class="deliver-actions">
-          ${isFromScanner && isVerified && hasUnserved ? `
+          ${isVerified && hasUnserved ? `
             <button class="btn btn-primary" style="padding:6px 12px; font-size:12px;" onclick="deliverMeal('${b.orderId}', ${idx})">Serve 1 Meal</button>
           ` : `
             <span class="dr-progress">${it.delivered}/${it.qty}</span>
@@ -1405,6 +1399,8 @@ async function deliverMeal(orderId, itemIdx){
     item.delivered += 1;
     await saveBooking(b);
     paintLookupCard(b, true);
+    playBeep();
+    showToast(`✅ Served 1 ${item.mealLabel} to ${b.name}`, 'good');
     generateReports();
   }
 }
@@ -1420,6 +1416,7 @@ async function markVerified(orderId){
   paintLookupCard(b, false);
   loadPendingPayments();
   generateReports();
+  showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
 
 async function loadPendingPayments(){
@@ -1487,29 +1484,43 @@ async function generateReports() {
   }
 }
 
+/* ENHANCED EXPORT CSV WITH MEAL SELECTIONS */
 async function exportBookingsCSV() {
   try {
     const all = await window.dbGetAllBookings();
     if(all.length === 0) { alert('No data to export.'); return; }
 
-    let csv = 'Order ID,Name,Phone,Flat,Payment Method,Total (INR),Payment Status,UTR,Created At\n';
+    let csv = 'Order ID,Name,Phone,Flat,Payment Method,Total (INR),Payment Status,UTR,Total Plates Booked,Total Plates Served,Booked Meals Summary,Created At\n';
     all.forEach(b => {
       const created = new Date(b.createdAt).toLocaleString();
-      csv += `"${b.orderId}","${b.name}","${b.phone}","${b.flatNumber||''}","${b.paymentMethod||''}",${b.total},"${b.paymentStatus}","${b.utr||''}","${created}"\n`;
+      
+      // Build meal selection summary
+      let totalBookedPlates = 0;
+      let totalServedPlates = 0;
+      const mealDetails = (b.items || []).map(it => {
+        totalBookedPlates += (it.qty || 0);
+        totalServedPlates += (it.delivered || 0);
+        const typeStr = it.type ? ` [${it.type}]` : '';
+        const parcelStr = it.parcelQty > 0 ? ` (+${it.parcelQty} parcel)` : '';
+        return `${it.dayLabel} ${it.mealLabel}${typeStr} x${it.qty}${parcelStr} (Served: ${it.delivered}/${it.qty})`;
+      }).join(' ; ');
+
+      csv += `"${b.orderId}","${b.name}","${b.phone}","${b.flatNumber||''}","${b.paymentMethod||''}",${b.total},"${b.paymentStatus}","${b.utr||''}",${totalBookedPlates},${totalServedPlates},"${mealDetails}","${created}"\n`;
     });
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.setAttribute('href', url);
     a.setAttribute('download', `durga_puja_bookings_${Date.now()}.csv`);
     a.click();
   } catch(e) {
+    console.error(e);
     alert('Failed to generate export.');
   }
 }
 
-/* ================= camera QR scan ================= */
+/* ================= CAMERA QR SCANNER ================= */
 async function toggleCamera(){
   if(camStream){ stopCamera(); return; }
   const box = document.getElementById('camBox');
@@ -1517,15 +1528,17 @@ async function toggleCamera(){
   const msg = document.getElementById('camMsg');
   msg.innerHTML='';
   try{
-    camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'environment' } });
+    camStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ exact: 'environment' } } }).catch(() => {
+      return navigator.mediaDevices.getUserMedia({ video: true });
+    });
     const video = document.getElementById('camVideo');
     video.srcObject = camStream;
     await video.play();
     box.classList.remove('hidden');
-    btn.textContent = 'Stop camera';
+    btn.textContent = 'Stop Camera Scanner';
     scanLoop();
   }catch(e){
-    msg.innerHTML = '<div class="msg err">Could not access the camera on this device/browser. Use manual Order ID lookup below instead.</div>';
+    msg.innerHTML = '<div class="msg err">Could not access camera. Please allow camera permissions or use manual lookup.</div>';
   }
 }
 
@@ -1535,26 +1548,26 @@ function stopCamera(){
   if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream=null; }
   document.getElementById('camBox').classList.add('hidden');
   const btn = document.getElementById('camToggleBtn');
-  if(btn) btn.textContent = 'Start camera scanner';
+  if(btn) btn.textContent = 'Start Camera Scanner';
 }
 
 async function handleMealScan(orderId, day, meal){
   const msg = document.getElementById('camMsg');
   const b = await fetchBooking(orderId);
-  if(!b){ msg.innerHTML = '<div class="msg err">No booking found for this QR.</div>'; return; }
+  if(!b){ msg.innerHTML = '<div class="msg err">No booking found for this QR code.</div>'; return; }
 
   const idx = b.items.findIndex(it=>it.day===day && it.meal===meal);
-  if(idx===-1){ msg.innerHTML = '<div class="msg err">This QR does not match any item in the booking.</div>'; return; }
+  if(idx===-1){ msg.innerHTML = '<div class="msg err">This QR does not match any item in this booking.</div>'; return; }
   const it = b.items[idx];
 
   if(b.paymentStatus === 'pending'){
-    msg.innerHTML = `<div class="msg err">⚠️ Payment not verified yet for ${escapeHtml(b.name)}. Verify payment first.</div>`;
+    msg.innerHTML = `<div class="msg err">⚠️ Payment not verified yet for ${escapeHtml(b.name)}. Verify payment first in Committee tab.</div>`;
     document.getElementById('lookupInput').value = orderId;
     doLookup(false);
     return;
   }
   if(it.delivered >= it.qty){
-    msg.innerHTML = `<div class="msg err">Already fully served: ${escapeHtml(b.name)} — ${it.dayLabel} ${it.mealLabel} (${it.delivered}/${it.qty}).</div>`;
+    msg.innerHTML = `<div class="msg err">⚠️ Already fully served: ${escapeHtml(b.name)} — ${it.dayLabel} ${it.mealLabel} (${it.delivered}/${it.qty} served).</div>`;
     document.getElementById('lookupInput').value = orderId;
     doLookup(true);
     return;
@@ -1564,7 +1577,7 @@ async function handleMealScan(orderId, day, meal){
   await saveBooking(b);
   playBeep();
   const typeTxt = it.type ? (it.type==='veg'?'Veg':'Non-veg') : '';
-  msg.innerHTML = `<div class="msg ok">✅ Served ${escapeHtml(b.name)}${b.flatNumber?' (Flat '+escapeHtml(b.flatNumber)+')':''} — ${it.dayLabel} ${it.mealLabel} ${typeTxt}: ${it.delivered}/${it.qty}</div>`;
+  msg.innerHTML = `<div class="msg ok">✅ Served 1 Plate to ${escapeHtml(b.name)}${b.flatNumber?' (Flat '+escapeHtml(b.flatNumber)+')':''} — ${it.dayLabel} ${it.mealLabel} ${typeTxt} (${it.delivered}/${it.qty})</div>`;
   document.getElementById('lookupInput').value = orderId;
   doLookup(true);
   generateReports();
@@ -1574,16 +1587,17 @@ function scanLoop(){
   const video = document.getElementById('camVideo');
   const canvas = document.getElementById('camCanvas');
   const ctx = canvas.getContext('2d');
+  
   function tick(){
     if(!camStream) return;
     if(video.readyState === video.HAVE_ENOUGH_DATA){
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      canvas.width = video.videoWidth || 320;
+      canvas.height = video.videoHeight || 240;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const img = ctx.getImageData(0,0,canvas.width,canvas.height);
-      const code = jsQR(img.data, img.width, img.height);
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+      
       if(code && code.data){
-        document.getElementById('camMsg').innerHTML = `<div class="msg ok">Scanned: ${escapeHtml(code.data)}</div>`;
         const payload = parseQrPayload(code.data);
         stopCamera();
         window.scrollTo({top:0, behavior:'smooth'});
