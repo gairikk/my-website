@@ -530,12 +530,12 @@
     <div class="card">
       <p class="section-label">⌨️ Or Look Up Booking Manually</p>
       <div class="search-row">
-        <input type="text" id="lookupInput" placeholder="Order ID or 10-digit phone">
-        <button class="btn btn-primary" onclick="doLookupDirect('lookupInput')">Find</button>
+        <input type="text" id="serveLookupInput" placeholder="Order ID or 10-digit phone">
+        <button class="btn btn-primary" onclick="doLookupDirect('serveLookupInput')">Find</button>
       </div>
     </div>
 
-    <div id="lookupResults"></div>
+    <div id="serveLookupResults"></div>
   </div>
 
   <!-- ================= COMMITTEE ADMIN TAB ================= -->
@@ -586,6 +586,8 @@
         <button class="btn btn-outline btn-block" onclick="loadPendingPayments()">Refresh list</button>
         <div id="pendingList"></div>
       </div>
+
+      <div id="adminLookupResults"></div>
     </div>
   </div>
 
@@ -1311,21 +1313,21 @@ function parseQrPayload(raw){
 
 function doLookupDirect(inputId) {
   const val = document.getElementById(inputId).value.trim();
-  document.getElementById('lookupInput').value = val;
-  doLookup(true);
+  const activeTab = document.getElementById('view-serve').classList.contains('hidden') ? 'admin' : 'serve';
+  doLookupForTarget(val, activeTab === 'serve' ? 'serveLookupResults' : 'adminLookupResults', true);
 }
 
-async function doLookup(isFromScanner = false){
-  const q = document.getElementById('lookupInput').value.trim();
-  const results = document.getElementById('lookupResults');
+async function doLookupForTarget(queryVal, targetContainerId, isFromScanner = false){
+  const results = document.getElementById(targetContainerId);
+  if(!results) return;
   results.innerHTML = '<div class="card"><div class="empty">Searching…</div></div>';
-  if(!q){ results.innerHTML=''; return; }
+  if(!queryVal){ results.innerHTML=''; return; }
 
   let matches = [];
-  if(/^\d{10}$/.test(q)){
-    matches = await window.dbGetBookingsByPhone(q);
+  if(/^\d{10}$/.test(queryVal)){
+    matches = await window.dbGetBookingsByPhone(queryVal);
   }else{
-    const b = await fetchBooking(q);
+    const b = await fetchBooking(queryVal);
     if(b) matches.push(b);
   }
 
@@ -1426,8 +1428,8 @@ async function markVerified(orderId){
 }
 
 async function reviewPendingPayment(orderId) {
-  // Ensure committee lookup receives and renders this order ID properly
-  const results = document.getElementById('lookupResults');
+  const results = document.getElementById('adminLookupResults');
+  if(!results) return;
   results.innerHTML = '<div class="card"><div class="empty">Loading order...</div></div>';
   const b = await fetchBooking(orderId);
   if (b) {
@@ -1580,14 +1582,14 @@ async function handleMealScan(orderId, day, meal){
 
   if(b.paymentStatus === 'pending'){
     msg.innerHTML = `<div class="msg err">⚠️ Payment not verified yet for ${escapeHtml(b.name)}. Verify payment first in Committee tab.</div>`;
-    document.getElementById('lookupInput').value = orderId;
-    doLookup(false);
+    document.getElementById('serveLookupInput').value = orderId;
+    doLookupDirect('serveLookupInput');
     return;
   }
   if(it.delivered >= it.qty){
     msg.innerHTML = `<div class="msg err">⚠️ Already fully served: ${escapeHtml(b.name)} — ${it.dayLabel} ${it.mealLabel} (${it.delivered}/${it.qty} served).</div>`;
-    document.getElementById('lookupInput').value = orderId;
-    doLookup(true);
+    document.getElementById('serveLookupInput').value = orderId;
+    doLookupDirect('serveLookupInput');
     return;
   }
 
@@ -1596,8 +1598,8 @@ async function handleMealScan(orderId, day, meal){
   playBeep();
   const typeTxt = it.type ? (it.type==='veg'?'Veg':'Non-veg') : '';
   msg.innerHTML = `<div class="msg ok">✅ Served 1 Plate to ${escapeHtml(b.name)}${b.flatNumber?' (Flat '+escapeHtml(b.flatNumber)+')':''} — ${it.dayLabel} ${it.mealLabel} ${typeTxt} (${it.delivered}/${it.qty})</div>`;
-  document.getElementById('lookupInput').value = orderId;
-  doLookup(true);
+  document.getElementById('serveLookupInput').value = orderId;
+  doLookupDirect('serveLookupInput');
   generateReports();
 }
 
@@ -1622,8 +1624,8 @@ function scanLoop(){
         if(payload.day && payload.meal){
           handleMealScan(payload.orderId, payload.day, payload.meal);
         } else {
-          document.getElementById('lookupInput').value = payload.orderId;
-          doLookup(true);
+          document.getElementById('serveLookupInput').value = payload.orderId;
+          doLookupDirect('serveLookupInput');
         }
         return;
       }
