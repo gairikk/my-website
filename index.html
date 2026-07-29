@@ -1548,10 +1548,11 @@ async function toggleCamera(){
   const msg = document.getElementById('camMsg');
   msg.innerHTML='';
   try{
-    camStream = await navigator.mediaDevices.getUserMedia({ 
-      video: { facingMode: { ideal: "environment" } } 
-    });
+    const constraints = { video: { facingMode: { ideal: "environment" } } };
+    camStream = await navigator.mediaDevices.getUserMedia(constraints);
     const video = document.getElementById('camVideo');
+    video.setAttribute("playsinline", true);
+    video.setAttribute("muted", true);
     video.srcObject = camStream;
     await video.play();
     box.classList.remove('hidden');
@@ -1611,11 +1612,11 @@ function scanLoop(){
   function tick(){
     if(!camStream) return;
     if(video.readyState === video.HAVE_ENOUGH_DATA){
-      canvas.width = video.videoWidth || 320;
-      canvas.height = video.videoHeight || 240;
+      canvas.width = video.videoWidth || 640;
+      canvas.height = video.videoHeight || 480;
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" });
       
       if(code && code.data){
         const payload = parseQrPayload(code.data);
