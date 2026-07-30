@@ -327,6 +327,8 @@
   .tag.veg{background:#E9F4E9;color:var(--green);}
   .tag.nonveg{background:#FBE6DA;color:#B4501D;}
   .tag.free{background:#DCEFDC;color:var(--green);}
+  .tag.parcel{background:#FFF3E8;color:var(--marigold);border:1px solid rgba(232,121,45,0.3);}
+  .tag.dinein{background:#EBF3FA;color:#1D63B4;border:1px solid rgba(29,99,180,0.3);}
 
   /* per-meal QR blocks */
   .qr-day-group{margin-top:14px;}
@@ -1187,11 +1189,24 @@ function renderBookingMealsHtml(b){
     byDay[dayId].items.forEach(it=>{
       const typeTag = it.type ? `<span class="tag ${it.type==='veg'?'veg':'nonveg'}">${it.type==='veg'?'Veg':'Non-veg'}</span>` : '';
       const freeTag = it.complimentary ? `<span class="tag free">FREE</span>` : '';
+      
+      // Parcel / Dine-in Tag Formatting
+      const parcelCount = it.parcelQty || 0;
+      const dineInCount = (it.qty || 0) - parcelCount;
+      let packagingTags = '';
+      if(parcelCount > 0 && dineInCount > 0) {
+        packagingTags = `<span class="tag dinein">🍽️ ${dineInCount} Dine-in</span><span class="tag parcel">📦 ${parcelCount} Parcel</span>`;
+      } else if(parcelCount > 0) {
+        packagingTags = `<span class="tag parcel">📦 ${parcelCount} Parcel</span>`;
+      } else {
+        packagingTags = `<span class="tag dinein">🍽️ Dine-in</span>`;
+      }
+
       const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
       html += `
         <div class="meal-qr-card">
           <div class="meal-qr-head">
-            <span class="lbl">${it.mealLabel}${typeTag}${freeTag}</span>
+            <span class="lbl">${it.mealLabel}${typeTag}${freeTag}${packagingTags}</span>
             <span class="val">${it.delivered}/${it.qty} served</span>
           </div>
           ${isUnlocked
@@ -1207,7 +1222,6 @@ function renderBookingMealsHtml(b){
 function mountMealQrCodes(b){
   const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
   if(!isUnlocked) return;
-  // Brief delay to ensure DOM mounts fully before QRCode generator renders canvas
   setTimeout(() => {
     b.items.forEach(it=>{
       const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
@@ -1248,7 +1262,6 @@ function startOver(existingName = '', existingPhone = '', existingFlat = ''){
   if(ticketUnsubscribe) ticketUnsubscribe();
   cart = {}; lastBooking = null; selectedPaymentMethod = null;
   
-  // Retain user details for convenient "Book More" flow
   document.getElementById('userName').value = existingName;
   document.getElementById('userPhone').value = existingPhone;
   document.getElementById('userFlat').value = existingFlat;
@@ -1423,10 +1436,22 @@ function paintLookupCard(b, isFromFoodCounter = false){
     ${b.items.map((it,idx)=>{
       const typeTag = it.type ? (it.type==='veg' ? 'Veg' : 'Non-veg') : '';
       const hasUnserved = it.delivered < it.qty;
+      const parcelCount = it.parcelQty || 0;
+      const dineInCount = (it.qty || 0) - parcelCount;
+      
+      let packagingTags = '';
+      if(parcelCount > 0 && dineInCount > 0) {
+        packagingTags = `<span class="tag dinein">🍽️ ${dineInCount} Dine-in</span><span class="tag parcel">📦 ${parcelCount} Parcel</span>`;
+      } else if(parcelCount > 0) {
+        packagingTags = `<span class="tag parcel">📦 ${parcelCount} Parcel</span>`;
+      } else {
+        packagingTags = `<span class="tag dinein">🍽️ Dine-in</span>`;
+      }
+
       return `
       <div class="deliver-row">
         <div class="dr-info">
-          <div class="dr-meal">${it.dayLabel} · ${it.mealLabel}${typeTag?' — '+typeTag:''}</div>
+          <div class="dr-meal">${it.dayLabel} · ${it.mealLabel}${typeTag?' — '+typeTag:''} ${packagingTags}</div>
           <div class="dr-sub">${it.delivered}/${it.qty} Served</div>
         </div>
         <div class="deliver-actions">
@@ -1557,7 +1582,7 @@ async function generateReports() {
   }
 }
 
-/* ENHANCED EXPORT CSV WITH MEAL SELECTIONS */
+/* ENHANCED EXPORT CSV WITH MEAL SELECTIONS & PARCEL BREAKDOWN */
 async function exportBookingsCSV() {
   try {
     const all = await window.dbGetAllBookings();
@@ -1573,8 +1598,10 @@ async function exportBookingsCSV() {
         totalBookedPlates += (it.qty || 0);
         totalServedPlates += (it.delivered || 0);
         const typeStr = it.type ? ` [${it.type}]` : '';
-        const parcelStr = it.parcelQty > 0 ? ` (+${it.parcelQty} parcel)` : '';
-        return `${it.dayLabel} ${it.mealLabel}${typeStr} x${it.qty}${parcelStr} (Served: ${it.delivered}/${it.qty})`;
+        const parcelCount = it.parcelQty || 0;
+        const dineInCount = (it.qty || 0) - parcelCount;
+        const pkgStr = parcelCount > 0 ? ` (DineIn:${dineInCount}, Parcel:${parcelCount})` : ` (DineIn:${it.qty})`;
+        return `${it.dayLabel} ${it.mealLabel}${typeStr} x${it.qty}${pkgStr} [Served:${it.delivered}/${it.qty}]`;
       }).join(' ; ');
 
       csv += `"${b.orderId}","${b.name}","${b.phone}","${b.flatNumber||''}","${b.paymentMethod||''}",${b.total},"${b.paymentStatus}","${b.utr||''}",${totalBookedPlates},${totalServedPlates},"${mealDetails}","${created}"\n`;
@@ -1650,7 +1677,11 @@ async function handleMealScan(orderId, day, meal){
   await saveBooking(b);
   playBeep();
   const typeTxt = it.type ? (it.type==='veg'?'Veg':'Non-veg') : '';
-  msg.innerHTML = `<div class="msg ok">✅ Served 1 Plate to ${escapeHtml(b.name)}${b.flatNumber?' (Flat '+escapeHtml(b.flatNumber)+')':''} — ${it.dayLabel} ${it.mealLabel} ${typeTxt} (${it.delivered}/${it.qty})</div>`;
+  const parcelCount = it.parcelQty || 0;
+  const dineInCount = (it.qty || 0) - parcelCount;
+  const pkgLabel = parcelCount > 0 ? ` (Parcel: ${parcelCount})` : ' (Dine-in)';
+
+  msg.innerHTML = `<div class="msg ok">✅ Served 1 Plate to ${escapeHtml(b.name)}${b.flatNumber?' (Flat '+escapeHtml(b.flatNumber)+')':''} — ${it.dayLabel} ${it.mealLabel} ${typeTxt}${pkgLabel} [${it.delivered}/${it.qty}]</div>`;
   document.getElementById('serveLookupInput').value = orderId;
   doLookupDirect('serveLookupInput');
   generateReports();
