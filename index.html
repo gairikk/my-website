@@ -430,8 +430,9 @@
             <input type="tel" id="userPhone" placeholder="10-digit number" maxlength="10" autocomplete="tel">
           </div>
           <div class="field">
-            <label for="userFlat">Flat / House number</label>
-            <input type="text" id="userFlat" placeholder="e.g. B-204" autocomplete="off">
+            <label for="userFlat">Flat / Block (A1, A2, B, C1, C2, C3)</label>
+            <input type="text" id="userFlat" placeholder="e.g. A1-204, B-101" autocomplete="off">
+            <div id="flatHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Flat must start with Block A1, A2, B, C1, C2, or C3 (e.g. A1-102, B-301).</div>
           </div>
         </div>
         <p style="margin:0;">
@@ -517,26 +518,38 @@
 
   <!-- ================= FOOD COUNTER / SERVE TAB ================= -->
   <div id="view-serve" class="hidden">
-    <div class="card">
-      <p class="section-label">📷 Food Counter QR Scanner</p>
-      <button class="btn btn-primary btn-block" id="camToggleBtn" onclick="toggleCamera()">Start Camera Scanner</button>
-      <div class="cam-box hidden" id="camBox">
-        <video id="camVideo" playsinline muted></video>
-        <div class="cam-frame"></div>
+    <div id="servePinGate" class="card">
+      <p class="section-label">🔐 Food Counter Access</p>
+      <p style="font-size:13.5px;color:#6b4a3a;">Enter volunteer PIN to start serving food.</p>
+      <div class="pin-pad">
+        <input type="tel" id="servePinInput" maxlength="6" placeholder="••••">
+        <button class="btn btn-primary" onclick="checkServePin()">Enter</button>
       </div>
-      <canvas id="camCanvas" class="hidden"></canvas>
-      <div id="camMsg"></div>
+      <div id="servePinMsg"></div>
     </div>
 
-    <div class="card">
-      <p class="section-label">⌨️ Or Look Up Booking Manually</p>
-      <div class="search-row">
-        <input type="text" id="serveLookupInput" placeholder="Order ID or 10-digit phone">
-        <button class="btn btn-primary" onclick="doLookupDirect('serveLookupInput')">Find</button>
+    <div id="servePanel" class="hidden">
+      <div class="card">
+        <p class="section-label">📷 Food Counter QR Scanner</p>
+        <button class="btn btn-primary btn-block" id="camToggleBtn" onclick="toggleCamera()">Start Camera Scanner</button>
+        <div class="cam-box hidden" id="camBox">
+          <video id="camVideo" playsinline muted></video>
+          <div class="cam-frame"></div>
+        </div>
+        <canvas id="camCanvas" class="hidden"></canvas>
+        <div id="camMsg"></div>
       </div>
-    </div>
 
-    <div id="serveLookupResults"></div>
+      <div class="card">
+        <p class="section-label">⌨️ Or Look Up Booking Manually</p>
+        <div class="search-row">
+          <input type="text" id="serveLookupInput" placeholder="Order ID or 10-digit phone">
+          <button class="btn btn-primary" onclick="doLookupDirect('serveLookupInput')">Find</button>
+        </div>
+      </div>
+
+      <div id="serveLookupResults"></div>
+    </div>
   </div>
 
   <!-- ================= COMMITTEE ADMIN TAB ================= -->
@@ -936,6 +949,11 @@ function setPaymentMethod(method){
   validateConfirmButtonState();
 }
 
+function validateFlatNumber(flatStr) {
+  const pattern = /^(A1|A2|B|C1|C2|C3)([-_\s]*\d+)?$/i;
+  return pattern.test(flatStr.trim());
+}
+
 function validateConfirmButtonState(){
   const confirmBtn = document.getElementById('confirmBookingBtn');
   const total = grandTotal();
@@ -974,6 +992,15 @@ document.addEventListener('change', (e)=>{
 });
 document.addEventListener('input', (e)=>{
   if(e.target && e.target.id==='utrInput') validateConfirmButtonState();
+  if(e.target && e.target.id==='userFlat') {
+    const val = e.target.value.trim();
+    const help = document.getElementById('flatHelpText');
+    if(val.length > 0 && !validateFlatNumber(val)) {
+      help.classList.remove('hidden');
+    } else {
+      help.classList.add('hidden');
+    }
+  }
 });
 
 /* ================= review & payment ================= */
@@ -981,8 +1008,13 @@ function goToReview(){
   const name = document.getElementById('userName').value.trim();
   const phone = document.getElementById('userPhone').value.trim();
   const flat = document.getElementById('userFlat').value.trim();
-  if(!name || !flat || !/^\d{10}$/.test(phone)){
-    alert('Please enter your name, flat/house number, and a valid 10-digit mobile number.');
+  
+  if(!name || !/^\d{10}$/.test(phone)){
+    alert('Please enter your name and a valid 10-digit mobile number.');
+    return;
+  }
+  if(!validateFlatNumber(flat)){
+    alert('Please enter a valid Flat/Block starting with A1, A2, B, C1, C2, or C3 (e.g. A1-204, B-101).');
     return;
   }
   if(itemCount()<=0){ alert('Please select at least one meal.'); return; }
@@ -1175,14 +1207,17 @@ function renderBookingMealsHtml(b){
 function mountMealQrCodes(b){
   const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
   if(!isUnlocked) return;
-  b.items.forEach(it=>{
-    const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
-    const el = document.getElementById(qid);
-    if(el){
-      el.innerHTML = '';
-      new QRCode(el, { text: mealQrPayload(b,it), width:140, height:140, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
-    }
-  });
+  // Brief delay to ensure DOM mounts fully before QRCode generator renders canvas
+  setTimeout(() => {
+    b.items.forEach(it=>{
+      const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
+      const el = document.getElementById(qid);
+      if(el){
+        el.innerHTML = '';
+        new QRCode(el, { text: mealQrPayload(b,it), width:140, height:140, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
+      }
+    });
+  }, 50);
 }
 
 function renderTicket(b){
@@ -1204,17 +1239,20 @@ function renderTicket(b){
       </div>
     </div>
     <div class="note">Each meal has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
-    <button class="btn btn-outline btn-block" onclick="startOver()">Book more coupons</button>
+    <button class="btn btn-outline btn-block" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.phone)}', '${escapeHtml(b.flatNumber||'')}')">Book More Coupons</button>
   `;
   mountMealQrCodes(b);
 }
 
-function startOver(){
+function startOver(existingName = '', existingPhone = '', existingFlat = ''){
   if(ticketUnsubscribe) ticketUnsubscribe();
   cart = {}; lastBooking = null; selectedPaymentMethod = null;
-  document.getElementById('userName').value='';
-  document.getElementById('userPhone').value='';
-  document.getElementById('userFlat').value='';
+  
+  // Retain user details for convenient "Book More" flow
+  document.getElementById('userName').value = existingName;
+  document.getElementById('userPhone').value = existingPhone;
+  document.getElementById('userFlat').value = existingFlat;
+  
   if(document.getElementById('utrInput')) document.getElementById('utrInput').value='';
   if(document.getElementById('paidConfirm')) document.getElementById('paidConfirm').checked = false;
   document.getElementById('confirmBookingBtn').disabled = true;
@@ -1290,6 +1328,18 @@ function checkPin(){
     document.getElementById('committeePanel').classList.remove('hidden');
     msg.innerHTML='';
     generateReports();
+  }else{
+    msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
+  }
+}
+
+function checkServePin(){
+  const v = document.getElementById('servePinInput').value.trim();
+  const msg = document.getElementById('servePinMsg');
+  if(v === CONFIG.committeePin){
+    document.getElementById('servePinGate').classList.add('hidden');
+    document.getElementById('servePanel').classList.remove('hidden');
+    msg.innerHTML='';
   }else{
     msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
   }
@@ -1423,10 +1473,7 @@ async function markVerified(orderId){
   b.verifiedAt = Date.now();
   await saveBooking(b);
   
-  // Re-paint admin lookup result card if displayed
   paintLookupCard(b, false);
-  
-  // Instantly refresh the pending payments queue
   await loadPendingPayments();
   generateReports();
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
