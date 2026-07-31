@@ -114,6 +114,13 @@
     color:var(--maroon-dark);
   }
 
+  /* ---------- Step Navigation Buttons ---------- */
+  .step-actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
+  }
+
   /* ---------- Layout ---------- */
   main{padding:16px 16px 8px;max-width:520px;margin:0 auto;}
   .card{
@@ -420,7 +427,9 @@
   <div id="view-book">
 
     <div id="bookForm">
-      <div class="card">
+      
+      <!-- STEP 1: Details Card -->
+      <div class="card" id="step1Card">
         <p class="section-label"><span class="num">1</span>Your details</p>
         <div class="field">
           <label for="userName">Full name</label>
@@ -454,22 +463,32 @@
 
         <div class="field" style="margin-top:12px;">
           <label for="userPin">Set 4-Digit Security PIN (to lock &amp; access your coupons)</label>
-          <input type="password" id="userPin" placeholder="e.g. 1234" maxlength="4" autocomplete="off">
+          <input type="password" id="userPin" placeholder="e.g. 1234" maxlength="4" autocomplete="off" oninput="validateStep1()">
           <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;">Remember this PIN. It prevents others from accessing your flat's coupons.</div>
         </div>
 
-        <p style="margin:0;">
+        <div class="step-actions">
+          <button class="btn btn-primary btn-block" id="btnNextToStep2" onclick="goToStep(2)" disabled>Next: Choose Meals →</button>
+        </div>
+
+        <p style="margin:12px 0 0; text-align:center;">
           <button class="btn-ghost" onclick="openMyCoupons()">Already booked? Find my coupons →</button>
         </p>
       </div>
 
-      <!-- Step 2: Choose Meals (Hidden by Default until Subscription Verification succeeds) -->
+      <!-- STEP 2: Choose Meals Card -->
       <div class="card" id="chooseMealsCard" style="display:none;">
         <p class="section-label"><span class="num">2</span>Choose your meals</p>
         <div class="day-pills" id="dayPills"></div>
         <div id="mealRows"></div>
+
+        <div class="step-actions">
+          <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-primary" style="flex:1;" id="btnNextToStep3" onclick="goToStep(3)" disabled>Next: Review Order →</button>
+        </div>
       </div>
 
+      <!-- STEP 3: Review & Confirm Card -->
       <div class="card" id="reviewCard" style="display:none;">
         <p class="section-label"><span class="num">3</span>Review &amp; confirm</p>
         <div id="summaryRows"></div>
@@ -530,7 +549,10 @@
           </label>
         </div>
 
-        <button class="btn btn-primary btn-block" id="confirmBookingBtn" style="margin-top:12px;" onclick="confirmBooking()" disabled>Confirm Booking &amp; Get QR Coupon</button>
+        <div class="step-actions">
+          <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
+          <button class="btn btn-primary" style="flex:1;" id="confirmBookingBtn" onclick="confirmBooking()" disabled>Confirm Booking &amp; Get QR Coupon</button>
+        </div>
       </div>
     </div>
 
@@ -672,7 +694,7 @@
 
 <div class="sticky-bar" id="stickyBar">
   <div class="amt">₹<span id="stickyTotal">0</span><small>Estimated total</small></div>
-  <button class="btn btn-primary" id="stickyBtn" onclick="goToReview()">Review &amp; Confirm</button>
+  <button class="btn btn-primary" id="stickyBtn" onclick="goToStep(3)" disabled>Review &amp; Confirm</button>
 </div>
 
 <!-- ================= FIREBASE MODULE INITIALIZATION ================= -->
@@ -719,13 +741,11 @@
 
   /* CASE-INSENSITIVE & DASH-FLEXIBLE ANNUAL FESTIVAL SUBSCRIPTION VERIFICATION CHECK */
   window.dbCheckSubscription = async function(fullFlatNumber) {
-    // Normalizes en-dashes/em-dashes to standard hyphens
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const ref = doc(db, "puja_subscriptions", cleanFlatId);
     const snap = await getDoc(ref);
     if(snap.exists()) {
       const data = snap.data();
-      // Case-insensitive status check ('paid', 'Paid', or 'PAID')
       return data.status && data.status.toString().toLowerCase().trim() === 'paid';
     }
     return false;
@@ -822,7 +842,52 @@ let lastBooking = null;
 let camStream = null, camLoopHandle = null;
 let ticketUnsubscribe = null;
 let selectedPaymentMethod = null;
-let isSubscriptionPaid = false; // Tracks subscription status
+let isSubscriptionPaid = false;
+let currentStep = 1;
+
+/* MULTI-STEP NAVIGATION CONTROL */
+function goToStep(stepNumber) {
+  if (stepNumber === 2) {
+    const name = document.getElementById('userName').value.trim();
+    const block = document.getElementById('blockSelect').value;
+    const flat = document.getElementById('flatSelect').value;
+    const userPin = document.getElementById('userPin').value.trim();
+
+    if (!name) { alert('Please enter your full name.'); return; }
+    if (!block || !flat) { alert('Please select your Block and Flat number.'); return; }
+    if (!isSubscriptionPaid) { alert('Annual Festival Subscription is unpaid for this flat.'); return; }
+    if (!/^\d{4}$/.test(userPin)) { alert('Please enter a 4-digit PIN.'); return; }
+  }
+
+  if (stepNumber === 3) {
+    if (itemCount() <= 0) { alert('Please select at least one meal to proceed.'); return; }
+    prepareReviewStep();
+  }
+
+  currentStep = stepNumber;
+  document.getElementById('step1Card').style.display = (stepNumber === 1) ? 'block' : 'none';
+  document.getElementById('chooseMealsCard').style.display = (stepNumber === 2) ? 'block' : 'none';
+  document.getElementById('reviewCard').style.display = (stepNumber === 3) ? 'block' : 'none';
+
+  const cardToScroll = stepNumber === 1 ? 'step1Card' : (stepNumber === 2 ? 'chooseMealsCard' : 'reviewCard');
+  document.getElementById(cardToScroll).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  refreshStickyVisibility();
+}
+
+function validateStep1() {
+  const name = document.getElementById('userName').value.trim();
+  const block = document.getElementById('blockSelect').value;
+  const flat = document.getElementById('flatSelect').value;
+  const userPin = document.getElementById('userPin').value.trim();
+  const nextBtn = document.getElementById('btnNextToStep2');
+
+  const isValid = name.length > 0 && block && flat && isSubscriptionPaid && /^\d{4}$/.test(userPin);
+  nextBtn.disabled = !isValid;
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target && (e.target.id === 'userName' || e.target.id === 'userPin')) validateStep1();
+});
 
 function generateFlatOptions(block) {
   let options = '<option value="">-- Select Flat --</option>';
@@ -845,7 +910,6 @@ function onBlockChange() {
   const flatSelect = document.getElementById('flatSelect');
   document.getElementById('subStatusMsg').innerHTML = '';
   isSubscriptionPaid = false;
-  document.getElementById('chooseMealsCard').style.display = 'none';
 
   if (block) {
     flatSelect.innerHTML = generateFlatOptions(block);
@@ -854,6 +918,7 @@ function onBlockChange() {
     flatSelect.innerHTML = '<option value="">-- Select Block First --</option>';
     flatSelect.disabled = true;
   }
+  validateStep1();
   updateTotals();
 }
 
@@ -861,12 +926,11 @@ async function checkSubscriptionStatus() {
   const block = document.getElementById('blockSelect').value;
   const flat = document.getElementById('flatSelect').value;
   const msgEl = document.getElementById('subStatusMsg');
-  const mealsCard = document.getElementById('chooseMealsCard');
 
   if (!block || !flat) {
     msgEl.innerHTML = '';
     isSubscriptionPaid = false;
-    mealsCard.style.display = 'none';
+    validateStep1();
     updateTotals();
     return;
   }
@@ -880,17 +944,15 @@ async function checkSubscriptionStatus() {
 
     if (paid) {
       msgEl.innerHTML = '<div class="msg ok" style="margin-top:6px; font-weight:600;">✓ Annual Festival Subscription Verified for Flat ' + fullFlatNumber + '</div>';
-      mealsCard.style.display = 'block'; // Show "Choose your meals" step when paid
     } else {
       msgEl.innerHTML = '<div class="msg err" style="margin-top:6px;">⚠️ <strong>Subscription Unpaid</strong>: Food coupon booking is restricted to flats that have cleared the Annual Festival Subscription.</div>';
-      mealsCard.style.display = 'none'; // Hide "Choose your meals" step when unpaid
     }
   } catch (e) {
     msgEl.innerHTML = '<div class="msg err" style="margin-top:6px;">Could not verify subscription status. Please try again.</div>';
     isSubscriptionPaid = false;
-    mealsCard.style.display = 'none';
   }
 
+  validateStep1();
   updateTotals();
 }
 
@@ -988,7 +1050,7 @@ function switchTab(tab){
 function refreshStickyVisibility(){
   const onBookTab = !document.getElementById('view-book').classList.contains('hidden');
   const formShown = document.getElementById('bookForm').style.display !== 'none';
-  document.getElementById('stickyBar').classList.toggle('hidden', !(onBookTab && formShown));
+  document.getElementById('stickyBar').classList.toggle('hidden', !(onBookTab && formShown && currentStep === 2));
 }
 
 /* ================= render day pills + meal rows ================= */
@@ -1110,13 +1172,13 @@ function itemCount(){
 
 function updateTotals(){
   const t = grandTotal();
-  const btn = document.getElementById('stickyBtn');
+  const stickyBtn = document.getElementById('stickyBtn');
+  const step2NextBtn = document.getElementById('btnNextToStep3');
   document.getElementById('stickyTotal').textContent = t;
   
-  // Disable button if no items selected OR subscription is unpaid
   const canProceed = itemCount() > 0 && isSubscriptionPaid;
-  btn.disabled = !canProceed;
-  btn.style.opacity = canProceed ? 1 : 0.5;
+  stickyBtn.disabled = !canProceed;
+  step2NextBtn.disabled = !canProceed;
 }
 
 /* ================= payment method ================= */
@@ -1175,35 +1237,10 @@ document.addEventListener('change', (e)=>{
     validateConfirmButtonState();
   }
 });
-document.addEventListener('input', (e)=>{
-  if(e.target && (e.target.id==='utrInput' || e.target.id==='userPin')) validateConfirmButtonState();
-});
 
 /* ================= review & payment ================= */
-function goToReview(){
+function prepareReviewStep(){
   const name = document.getElementById('userName').value.trim();
-  const block = document.getElementById('blockSelect').value;
-  const flat = document.getElementById('flatSelect').value;
-  const userPin = document.getElementById('userPin').value.trim();
-  
-  if(!isSubscriptionPaid) {
-    alert('Food coupon booking is restricted because the Annual Festival Subscription is unpaid for this flat.');
-    return;
-  }
-  if(!name){
-    alert('Please enter your full name.');
-    return;
-  }
-  if(!block || !flat){
-    alert('Please select both your Block and Flat number from the dropdowns.');
-    return;
-  }
-  if(!/^\d{4}$/.test(userPin)) {
-    alert('Please set a 4-digit numeric Security PIN to protect your coupons.');
-    return;
-  }
-  if(itemCount()<=0){ alert('Please select at least one meal.'); return; }
-
   const summary = document.getElementById('summaryRows');
   summary.innerHTML = '';
   Object.keys(cart).forEach(k=>{
@@ -1258,9 +1295,6 @@ function goToReview(){
     confirmBtn.disabled = true;
     confirmBtn.textContent = 'Reserve My Complimentary Bhog';
   }
-
-  document.getElementById('reviewCard').style.display = 'block';
-  document.getElementById('reviewCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function genOrderId(){
@@ -1472,20 +1506,18 @@ function startOver(existingName = '', existingFlat = '', existingPin = ''){
   } else {
     document.getElementById('subStatusMsg').innerHTML = '';
     isSubscriptionPaid = false;
-    document.getElementById('chooseMealsCard').style.display = 'none';
   }
   
   if(document.getElementById('utrInput')) document.getElementById('utrInput').value='';
   if(document.getElementById('paidConfirm')) document.getElementById('paidConfirm').checked = false;
   if(document.getElementById('privacyTermsConfirm')) document.getElementById('privacyTermsConfirm').checked = false;
-  document.getElementById('confirmBookingBtn').disabled = true;
-  document.getElementById('reviewCard').style.display = 'none';
+  
   document.getElementById('ticketView').classList.add('hidden');
   document.getElementById('bookForm').style.display = 'block';
   activeDay = CONFIG.days[0].id;
   renderDayPills(); renderMealRows(); updateTotals();
-  refreshStickyVisibility();
-  window.scrollTo({top:0, behavior:'smooth'});
+  
+  goToStep(1); // Reset back to Step 1
 }
 
 function escapeHtml(s){
