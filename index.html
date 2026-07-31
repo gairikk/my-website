@@ -140,7 +140,7 @@
     font-size:12px;font-weight:700;flex:none;
   }
   label{font-size:13px;font-weight:600;color:var(--maroon-dark);display:block;margin-bottom:4px;}
-  input[type=text],input[type=tel],select{
+  input[type=text],input[type=tel],input[type=password],select{
     width:100%;
     border:1.5px solid var(--line);
     border-radius:10px;
@@ -449,6 +449,12 @@
           </div>
         </div>
 
+        <div class="field">
+          <label for="userPin">Set 4-Digit Security PIN (to lock &amp; access your coupons)</label>
+          <input type="password" id="userPin" placeholder="e.g. 1234" maxlength="4" autocomplete="off">
+          <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;">Remember this PIN. It prevents others from accessing your flat's coupons.</div>
+        </div>
+
         <p style="margin:0;">
           <button class="btn-ghost" onclick="openMyCoupons()">Already booked? Find my coupons →</button>
         </p>
@@ -511,7 +517,7 @@
 
         <!-- Privacy & Terms Advisory -->
         <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);">
-          <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name and Flat Number are stored securely to generate, manage, and verify your Durga Puja food coupons. You reserve the right to search or request deletion of your booking records at any time.
+          <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name, Flat Number, and PIN are stored securely to manage and verify your food coupons.
         </div>
         <div class="field" style="margin-top:10px;">
           <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
@@ -530,7 +536,7 @@
     <!-- my coupons search -->
     <div id="myCouponsView" class="hidden">
       <div class="card">
-        <p class="section-label">🔍 Find my coupons</p>
+        <p class="section-label">🔒 Find my coupons (PIN Protected)</p>
         <div class="field">
           <label for="searchName">Full Name</label>
           <input type="text" id="searchName" placeholder="Enter full name">
@@ -555,6 +561,11 @@
               <option value="">-- Select Block First --</option>
             </select>
           </div>
+        </div>
+
+        <div class="field">
+          <label for="searchPinInput">4-Digit Security PIN</label>
+          <input type="password" id="searchPinInput" placeholder="••••" maxlength="4">
         </div>
 
         <button class="btn btn-primary btn-block" onclick="searchMyCoupons()">Search Coupons</button>
@@ -702,7 +713,7 @@
     });
   };
 
-  window.dbGetBookingsByNameAndFlat = async function(name, flat) {
+  window.dbGetBookingsByNameAndFlatAndPin = async function(name, flat, pin) {
     const q = query(
       collection(db, "bookings"), 
       where("flatNumber", "==", flat.trim())
@@ -711,7 +722,10 @@
     const results = [];
     snap.forEach(d => {
       const data = d.data();
-      if(data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim()) {
+      if(
+        data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim() &&
+        data.userPin && data.userPin === pin.trim()
+      ) {
         results.push(data);
       }
     });
@@ -791,7 +805,6 @@ let camStream = null, camLoopHandle = null;
 let ticketUnsubscribe = null;
 let selectedPaymentMethod = null;
 
-/* Helper to generate flat number options dynamically */
 function generateFlatOptions(block) {
   let options = '<option value="">-- Select Flat --</option>';
   if (!block) return options;
@@ -1054,9 +1067,10 @@ function setPaymentMethod(method){
 function validateConfirmButtonState(){
   const confirmBtn = document.getElementById('confirmBookingBtn');
   const termsChecked = document.getElementById('privacyTermsConfirm').checked;
+  const userPin = document.getElementById('userPin').value.trim();
   const total = grandTotal();
 
-  if(!termsChecked) {
+  if(!termsChecked || !/^\d{4}$/.test(userPin)) {
     confirmBtn.disabled = true;
     return;
   }
@@ -1097,7 +1111,7 @@ document.addEventListener('change', (e)=>{
   }
 });
 document.addEventListener('input', (e)=>{
-  if(e.target && e.target.id==='utrInput') validateConfirmButtonState();
+  if(e.target && (e.target.id==='utrInput' || e.target.id==='userPin')) validateConfirmButtonState();
 });
 
 /* ================= review & payment ================= */
@@ -1105,6 +1119,7 @@ function goToReview(){
   const name = document.getElementById('userName').value.trim();
   const block = document.getElementById('blockSelect').value;
   const flat = document.getElementById('flatSelect').value;
+  const userPin = document.getElementById('userPin').value.trim();
   
   if(!name){
     alert('Please enter your full name.');
@@ -1112,6 +1127,10 @@ function goToReview(){
   }
   if(!block || !flat){
     alert('Please select both your Block and Flat number from the dropdowns.');
+    return;
+  }
+  if(!/^\d{4}$/.test(userPin)) {
+    alert('Please set a 4-digit numeric Security PIN to protect your coupons.');
     return;
   }
   if(itemCount()<=0){ alert('Please select at least one meal.'); return; }
@@ -1186,6 +1205,7 @@ async function confirmBooking(){
   const name = document.getElementById('userName').value.trim();
   const block = document.getElementById('blockSelect').value;
   const flat = document.getElementById('flatSelect').value;
+  const userPin = document.getElementById('userPin').value.trim();
   const fullFlatNumber = `${block}-${flat}`;
   
   const utrEl = document.getElementById('utrInput');
@@ -1221,7 +1241,7 @@ async function confirmBooking(){
 
   const orderId = genOrderId();
   const booking = {
-    orderId, name, flatNumber: fullFlatNumber, items,
+    orderId, name, flatNumber: fullFlatNumber, userPin, items,
     total,
     paymentMethod,
     utr: (paymentMethod==='upi') ? (utr || null) : null,
@@ -1351,7 +1371,7 @@ function renderTicket(b){
       </div>
     </div>
     <div class="note">Each meal has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
-    <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}')">Book More Coupons</button>
+    <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">Book More Coupons</button>
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
   `;
   mountMealQrCodes(b);
@@ -1368,11 +1388,12 @@ async function deleteUserBooking(orderId) {
   }
 }
 
-function startOver(existingName = '', existingFlat = ''){
+function startOver(existingName = '', existingFlat = '', existingPin = ''){
   if(ticketUnsubscribe) ticketUnsubscribe();
   cart = {}; lastBooking = null; selectedPaymentMethod = null;
   
   document.getElementById('userName').value = existingName;
+  document.getElementById('userPin').value = existingPin;
   if(existingFlat && existingFlat.includes('-')) {
     const parts = existingFlat.split('-');
     document.getElementById('blockSelect').value = parts[0];
@@ -1413,18 +1434,19 @@ async function searchMyCoupons(){
   const name = document.getElementById('searchName').value.trim();
   const block = document.getElementById('searchBlockSelect').value;
   const flat = document.getElementById('searchFlatSelect').value;
+  const pin = document.getElementById('searchPinInput').value.trim();
   const results = document.getElementById('myCouponsResults');
   
-  if(!name || !block || !flat){ 
-    results.innerHTML = '<div class="empty">Please enter full name and select both Block and Flat from dropdowns.</div>'; 
+  if(!name || !block || !flat || !/^\d{4}$/.test(pin)){ 
+    results.innerHTML = '<div class="empty">Please enter your Name, select Block &amp; Flat, and enter your 4-digit Security PIN.</div>'; 
     return; 
   }
   
   const fullFlatNumber = `${block}-${flat}`;
   results.innerHTML = '<div class="empty">Searching…</div>';
   try{
-    const matches = await window.dbGetBookingsByNameAndFlat(name, fullFlatNumber);
-    if(matches.length===0){ results.innerHTML = '<div class="empty">No bookings found for these details.</div>'; return; }
+    const matches = await window.dbGetBookingsByNameAndFlatAndPin(name, fullFlatNumber, pin);
+    if(matches.length===0){ results.innerHTML = '<div class="empty">No matching bookings found. Please check your Name, Flat, and PIN.</div>'; return; }
     matches.sort((a,b)=>b.createdAt-a.createdAt);
     results.innerHTML='';
     matches.forEach(b=>{
