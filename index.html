@@ -1217,7 +1217,8 @@ function effectiveInfo(dayId, mealId, chosenType){
 
   return {
     price, items, complimentary, type, forced: !!forced,
-    hours: base.hours || '',
+    label: (ov && ov.label) ? ov.label : (base ? base.label : 'Meal'),
+    hours: base ? (base.hours || '') : '',
     note: ov ? ov.note : null
   };
 }
@@ -1434,7 +1435,6 @@ function validateConfirmButtonState(){
     const utrInput = document.getElementById('utrInput');
     const utrHelp = document.getElementById('utrHelpText');
 
-    // Auto-format UTR input: numbers only, max 12 digits
     utrInput.value = utrInput.value.replace(/\D/g, '').slice(0, 12);
 
     if(isChecked){
