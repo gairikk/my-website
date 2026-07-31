@@ -448,6 +448,15 @@
   .stat-card{background:#FFFDF9;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center;}
   .stat-val{font-family:'Baloo 2',cursive;font-size:22px;font-weight:800;color:var(--maroon);}
   .stat-lbl{font-size:11.5px;color:#8a6a55;font-weight:600;}
+
+  /* ---------- Print Friendly Optimization ---------- */
+  @media print {
+    body { background: #fff; color: #000; padding: 0; }
+    .hero, .tabs, .stepper-bar, .step-actions, button, .note, input, select { display: none !important; }
+    main { padding: 0; max-width: 100%; }
+    .ticket { border: 2px solid #000; box-shadow: none; margin: 0; }
+    .ticket-head { background: #7A1220 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
 </style>
 </head>
 <body>
@@ -854,10 +863,19 @@
     await deleteDoc(ref);
   };
 
+  /* LIVE FIRESTORE LISTENER WITH TOAST NOTIFICATION */
   window.dbListenToBooking = function(orderId, callback) {
     const ref = doc(db, "bookings", orderId.toUpperCase().trim());
+    let isInitial = true;
     return onSnapshot(ref, (snap) => {
-      if(snap.exists()) callback(snap.data());
+      if(snap.exists()) {
+        const data = snap.data();
+        if (!isInitial && data.paymentStatus === 'verified') {
+          showToast('🎉 Your payment has been verified by the committee! QR codes are now unlocked.', 'good');
+        }
+        isInitial = false;
+        callback(data);
+      }
     });
   };
 
@@ -888,7 +906,6 @@
       batch.set(docRef, { status: cleanStatus, updatedAt: Date.now() }, { merge: true });
       count++;
 
-      // Firestore Batch limit is 500 writes
       if (count % 400 === 0) {
         await batch.commit();
         batch = writeBatch(db);
@@ -949,7 +966,7 @@ const CONFIG = {
   upiId: "xxx@ybl",
   upiName: "xxx xxx",
   committeePin: "7576",
-  hmacSecretKey: "BHOG_BELA_SECRET_2026", // Secret Key for offline HMAC QR signing
+  hmacSecretKey: "BHOG_BELA_SECRET_2026",
   parcelCharge: 15,
 
   days: [
@@ -1008,7 +1025,7 @@ let isSubscriptionPaid = false;
 let currentStep = 1;
 let selectedCsvFile = null;
 
-/* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR & VERIFIER */
+/* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR */
 async function generateHMACSignature(dataStr) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -1018,7 +1035,7 @@ async function generateHMACSignature(dataStr) {
   );
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(dataStr));
   const hashArray = Array.from(new Uint8Array(sig));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 8); // 8-char HMAC signature
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 8);
 }
 
 /* MULTI-STEP NAVIGATION CONTROL & STEPPER UI */
@@ -1047,7 +1064,6 @@ function goToStep(stepNumber) {
   document.getElementById('chooseMealsCard').style.display = (stepNumber === 2) ? 'block' : 'none';
   document.getElementById('reviewCard').style.display = (stepNumber === 3) ? 'block' : 'none';
 
-  // Update Stepper Visual Bar
   for(let i=1; i<=3; i++){
     const el = document.getElementById('step'+i+'Indicator');
     el.classList.toggle('active', i === stepNumber);
@@ -1218,7 +1234,6 @@ function playBeep() {
     osc.stop(ctx.currentTime + 0.15);
   } catch(e) {}
 
-  // Trigger Haptic Vibration if supported on device
   if ("vibrate" in navigator) {
     navigator.vibrate([200]);
   }
@@ -1419,6 +1434,9 @@ function validateConfirmButtonState(){
     const utrInput = document.getElementById('utrInput');
     const utrHelp = document.getElementById('utrHelpText');
 
+    // Auto-format UTR input: numbers only, max 12 digits
+    utrInput.value = utrInput.value.replace(/\D/g, '').slice(0, 12);
+
     if(isChecked){
       const utrVal = utrInput.value.trim();
       const isValidUtr = /^\d{12}$/.test(utrVal);
@@ -1589,7 +1607,7 @@ function paymentMethodLabel(b){
 async function mealQrPayloadHMAC(b, it){
   const rawPayload = `${b.orderId}|${it.day}|${it.meal}|${b.name}`;
   const hmac = await generateHMACSignature(rawPayload);
-  return `${rawPayload}|${hmac}`; // Append 8-char HMAC signature
+  return `${rawPayload}|${hmac}`;
 }
 
 function renderBookingMealsHtml(b){
@@ -1704,22 +1722,20 @@ async function deleteUserBooking(orderId) {
   }
 }
 
+/* ROBUST STATE RESET FUNCTION */
 function startOver(existingName = '', existingFlat = '', existingPin = ''){
   if(ticketUnsubscribe) ticketUnsubscribe();
-  cart = {}; lastBooking = null; selectedPaymentMethod = null;
+  cart = {}; 
+  lastBooking = null; 
+  selectedPaymentMethod = null;
+  isSubscriptionPaid = false;
   
   document.getElementById('userName').value = existingName;
   document.getElementById('userPin').value = existingPin;
-  if(existingFlat && existingFlat.includes('-')) {
-    const parts = existingFlat.split('-');
-    document.getElementById('blockSelect').value = parts[0];
-    onBlockChange();
-    document.getElementById('flatSelect').value = parts[1];
-    checkSubscriptionStatus();
-  } else {
-    document.getElementById('subStatusMsg').innerHTML = '';
-    isSubscriptionPaid = false;
-  }
+  document.getElementById('blockSelect').value = "";
+  document.getElementById('flatSelect').innerHTML = '<option value="">-- Select Block First --</option>';
+  document.getElementById('flatSelect').disabled = true;
+  document.getElementById('subStatusMsg').innerHTML = '';
   
   if(document.getElementById('utrInput')) document.getElementById('utrInput').value='';
   if(document.getElementById('paidConfirm')) document.getElementById('paidConfirm').checked = false;
@@ -1728,9 +1744,11 @@ function startOver(existingName = '', existingFlat = '', existingPin = ''){
   document.getElementById('ticketView').classList.add('hidden');
   document.getElementById('bookForm').style.display = 'block';
   activeDay = CONFIG.days[0].id;
-  renderDayPills(); renderMealRows(); updateTotals();
+  renderDayPills(); 
+  renderMealRows(); 
+  updateTotals();
   
-  goToStep(1); // Reset back to Step 1
+  goToStep(1);
 }
 
 function escapeHtml(s){
@@ -2218,7 +2236,6 @@ async function exportCookSummaryCSV() {
     const summary = {};
 
     all.forEach(b => {
-      // Only count verified or complimentary orders for kitchen cooking
       if (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary') {
         (b.items || []).forEach(it => {
           const key = `${it.dayLabel} | ${it.mealLabel} | ${it.type ? (it.type==='veg'?'Veg':'Non-veg') : 'Standard'}`;
@@ -2289,11 +2306,9 @@ function stopCamera(){
 async function handleMealScan(orderId, day, meal, scannedHmac){
   const msg = document.getElementById('camMsg');
   
-  // Validate HMAC offline signature
   if(scannedHmac) {
     const rawPayload = `${orderId}|${day}|${meal}`;
     const expectedHmac = await generateHMACSignature(rawPayload);
-    // Ignore invalid / tampered QR signatures
     if (scannedHmac.toLowerCase() !== expectedHmac.toLowerCase()) {
       msg.innerHTML = '<div class="msg err">❌ Invalid or Tampered QR Code Signature!</div>';
       return;
