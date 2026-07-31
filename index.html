@@ -169,6 +169,67 @@
     margin-top:16px;
   }
 
+  /* ---------- Enhanced Payment Option Cards ---------- */
+  .payment-options-grid {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+  }
+  .payment-card {
+    flex: 1;
+    border: 2px solid var(--line);
+    background: #FFFDF9;
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+  }
+  .payment-card:hover {
+    border-color: var(--marigold);
+    background: #FFF8ED;
+  }
+  .payment-card.active {
+    border-color: var(--marigold);
+    background: #FFF3E8;
+    box-shadow: 0 4px 12px rgba(232,121,45,0.18);
+  }
+  .payment-card .icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: 4px;
+  }
+  .payment-card .title {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--maroon-dark);
+    display: block;
+  }
+  .payment-card .desc {
+    font-size: 11px;
+    color: #8a6a55;
+    display: block;
+    margin-top: 2px;
+  }
+  .payment-card.active::after {
+    content: "✓";
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: var(--marigold);
+    color: #fff;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   /* ---------- Drag & Drop File Upload Box ---------- */
   .upload-box{
     border:2px dashed var(--marigold);
@@ -582,9 +643,17 @@
         <div id="paidSection">
           <div class="field" style="margin-top:14px;">
             <label>How will you pay?</label>
-            <div class="variant-picker">
-              <div class="variant-btn" id="pmCash" onclick="setPaymentMethod('cash')"><span class="vt">💵 Cash</span></div>
-              <div class="variant-btn" id="pmUpi" onclick="setPaymentMethod('upi')"><span class="vt">📱 UPI</span></div>
+            <div class="payment-options-grid">
+              <div class="payment-card" id="pmCash" onclick="setPaymentMethod('cash')">
+                <span class="icon">💵</span>
+                <span class="title">Cash</span>
+                <span class="desc">Pay at the desk</span>
+              </div>
+              <div class="payment-card" id="pmUpi" onclick="setPaymentMethod('upi')">
+                <span class="icon">📱</span>
+                <span class="title">UPI</span>
+                <span class="desc">Scan &amp; pay app</span>
+              </div>
             </div>
           </div>
 
@@ -1300,7 +1369,6 @@ function renderMealRows(){
     if(!m.hasVariant || info.forced) {
       let subTotal = row.vegQty * info.vegPrice + row.vegParcel * CONFIG.parcelCharge;
       
-      // Only show menu chips if qty > 0
       if (row.vegQty > 0) {
         chipsHtml = info.vegItems.map(i=>`<span class="chip">${i}</span>`).join('');
       }
@@ -1339,7 +1407,6 @@ function renderMealRows(){
       let nonvegSub = row.nonvegQty * info.nonvegPrice + row.nonvegParcel * CONFIG.parcelCharge;
       let totalMealSub = vegSub + nonvegSub;
 
-      // Only show chips for the variant that has been selected (> 0)
       let activeChips = [];
       if (row.vegQty > 0) {
         activeChips = activeChips.concat(info.vegItems);
@@ -1773,14 +1840,14 @@ function renderBookingMealsHtml(b){
   return html;
 }
 
-function mountMealQrCodes(b){
+function mountMealQrCodes(b, container = document){
   const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
   if(!isUnlocked) return;
   requestAnimationFrame(() => {
     setTimeout(() => {
       b.items.forEach(async (it) => {
         const qid = `qr_${b.orderId}_${it.day}_${it.meal}_${it.type}`;
-        const el = document.getElementById(qid);
+        const el = container.querySelector('#' + qid);
         if(el && el.children.length === 0){
           el.innerHTML = '';
           const signedPayload = await mealQrPayloadHMAC(b, it);
@@ -1816,7 +1883,7 @@ function renderTicket(b){
     <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">Book More Coupons</button>
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
   `;
-  mountMealQrCodes(b);
+  mountMealQrCodes(b, document);
 }
 
 /* DOWNLOAD TICKET AS IMAGE (PNG) */
@@ -1932,7 +1999,7 @@ function renderMiniTicketInto(container, b){
       <div class="ticket-pay">${paymentMethodLabel(b)}</div>
       ${renderBookingMealsHtml(b)}
     </div>`;
-  mountMealQrCodes(b);
+  mountMealQrCodes(b, container);
 }
 
 /* ================= COMMITTEE ADMIN & BULK CSV UPLOAD ================= */
