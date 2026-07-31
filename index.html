@@ -467,6 +467,17 @@
           <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;">Remember this PIN. It prevents others from accessing your flat's coupons.</div>
         </div>
 
+        <!-- Privacy Advisory moved to Step 1 -->
+        <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);">
+          <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name, Flat Number, and PIN are stored securely to manage and verify your food coupons.
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
+            <input type="checkbox" id="privacyTermsConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;" onchange="validateStep1()">
+            <span style="font-size:13px; color:var(--maroon-dark);">I accept the Data Privacy Terms &amp; Conditions.</span>
+          </label>
+        </div>
+
         <div class="step-actions">
           <button class="btn btn-primary btn-block" id="btnNextToStep2" onclick="goToStep(2)" disabled>Next: Choose Meals →</button>
         </div>
@@ -513,7 +524,7 @@
 
             <div class="field" style="margin-top:14px;">
               <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
-                <input type="checkbox" id="paidConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;">
+                <input type="checkbox" id="paidConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;" onchange="toggleUtrBox()">
                 <span style="font-size:13.5px;">I have completed the UPI payment for ₹<span id="paidAmountLbl">0</span></span>
               </label>
             </div>
@@ -521,7 +532,7 @@
             <div id="utrContainer" class="hidden" style="margin-top:12px;">
               <div class="field">
                 <label for="utrInput">12-Digit UPI UTR / Reference Number <span style="color:#8a1f1f;">*</span></label>
-                <input type="tel" id="utrInput" placeholder="Enter 12-digit UTR from payment app" maxlength="12" autocomplete="off">
+                <input type="tel" id="utrInput" placeholder="Enter 12-digit UTR from payment app" maxlength="12" autocomplete="off" oninput="validateConfirmButtonState()">
                 <div id="utrHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Please enter exactly 12 numeric digits from your UPI transaction receipt.</div>
               </div>
             </div>
@@ -538,18 +549,7 @@
           <div class="note good" style="margin-top:14px;">🎁 This order is fully complimentary — no payment needed. Just confirm below to reserve your bhog.</div>
         </div>
 
-        <!-- Privacy & Terms Advisory -->
-        <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);">
-          <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name, Flat Number, and PIN are stored securely to manage and verify your food coupons.
-        </div>
-        <div class="field" style="margin-top:10px;">
-          <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
-            <input type="checkbox" id="privacyTermsConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;">
-            <span style="font-size:13px; color:var(--maroon-dark);">I accept the Data Privacy Terms &amp; Conditions.</span>
-          </label>
-        </div>
-
-        <div class="step-actions">
+        <div class="step-actions" style="margin-top:16px;">
           <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
           <button class="btn btn-primary" style="flex:1;" id="confirmBookingBtn" onclick="confirmBooking()" disabled>Confirm Booking &amp; Get QR Coupon</button>
         </div>
@@ -852,11 +852,13 @@ function goToStep(stepNumber) {
     const block = document.getElementById('blockSelect').value;
     const flat = document.getElementById('flatSelect').value;
     const userPin = document.getElementById('userPin').value.trim();
+    const terms = document.getElementById('privacyTermsConfirm').checked;
 
     if (!name) { alert('Please enter your full name.'); return; }
     if (!block || !flat) { alert('Please select your Block and Flat number.'); return; }
     if (!isSubscriptionPaid) { alert('Annual Festival Subscription is unpaid for this flat.'); return; }
     if (!/^\d{4}$/.test(userPin)) { alert('Please enter a 4-digit PIN.'); return; }
+    if (!terms) { alert('Please accept the Data Privacy Terms & Conditions.'); return; }
   }
 
   if (stepNumber === 3) {
@@ -879,9 +881,10 @@ function validateStep1() {
   const block = document.getElementById('blockSelect').value;
   const flat = document.getElementById('flatSelect').value;
   const userPin = document.getElementById('userPin').value.trim();
+  const terms = document.getElementById('privacyTermsConfirm').checked;
   const nextBtn = document.getElementById('btnNextToStep2');
 
-  const isValid = name.length > 0 && block && flat && isSubscriptionPaid && /^\d{4}$/.test(userPin);
+  const isValid = name.length > 0 && block && flat && isSubscriptionPaid && /^\d{4}$/.test(userPin) && terms;
   nextBtn.disabled = !isValid;
 }
 
@@ -1181,7 +1184,19 @@ function updateTotals(){
   step2NextBtn.disabled = !canProceed;
 }
 
-/* ================= payment method ================= */
+/* ================= payment method & UTR toggle ================= */
+function toggleUtrBox() {
+  const isChecked = document.getElementById('paidConfirm').checked;
+  const utrContainer = document.getElementById('utrContainer');
+  
+  if (isChecked) {
+    utrContainer.classList.remove('hidden');
+  } else {
+    utrContainer.classList.add('hidden');
+  }
+  validateConfirmButtonState();
+}
+
 function setPaymentMethod(method){
   selectedPaymentMethod = method;
   document.getElementById('pmCash').classList.toggle('active', method==='cash');
@@ -1193,8 +1208,8 @@ function setPaymentMethod(method){
 
 function validateConfirmButtonState(){
   const confirmBtn = document.getElementById('confirmBookingBtn');
-  const termsChecked = document.getElementById('privacyTermsConfirm').checked;
   const userPin = document.getElementById('userPin').value.trim();
+  const termsChecked = document.getElementById('privacyTermsConfirm').checked;
   const total = grandTotal();
 
   if(!termsChecked || !/^\d{4}$/.test(userPin) || !isSubscriptionPaid) {
@@ -1212,18 +1227,15 @@ function validateConfirmButtonState(){
 
   if(selectedPaymentMethod === 'upi'){
     const isChecked = document.getElementById('paidConfirm').checked;
-    const utrContainer = document.getElementById('utrContainer');
     const utrInput = document.getElementById('utrInput');
     const utrHelp = document.getElementById('utrHelpText');
 
     if(isChecked){
-      utrContainer.classList.remove('hidden');
       const utrVal = utrInput.value.trim();
       const isValidUtr = /^\d{12}$/.test(utrVal);
       utrHelp.classList.toggle('hidden', !(utrVal.length>0 && !isValidUtr));
       confirmBtn.disabled = !isValidUtr;
     } else {
-      utrContainer.classList.add('hidden');
       confirmBtn.disabled = true;
     }
     return;
@@ -1231,12 +1243,6 @@ function validateConfirmButtonState(){
 
   confirmBtn.disabled = true;
 }
-
-document.addEventListener('change', (e)=>{
-  if(e.target && (e.target.id==='paidConfirm' || e.target.id==='privacyTermsConfirm')) {
-    validateConfirmButtonState();
-  }
-});
 
 /* ================= review & payment ================= */
 function prepareReviewStep(){
@@ -1282,7 +1288,6 @@ function prepareReviewStep(){
     new QRCode(document.getElementById('upiQr'), { text: upiLink, width:150, height:150, colorDark:'#4A0A12', colorLight:'#FFFFFF' });
 
     document.getElementById('paidConfirm').checked = false;
-    document.getElementById('privacyTermsConfirm').checked = false;
     document.getElementById('utrContainer').classList.add('hidden');
     document.getElementById('utrInput').value = '';
     document.getElementById('utrHelpText').classList.add('hidden');
@@ -1291,8 +1296,7 @@ function prepareReviewStep(){
   } else {
     paidSection.classList.add('hidden');
     freeSection.classList.remove('hidden');
-    document.getElementById('privacyTermsConfirm').checked = false;
-    confirmBtn.disabled = true;
+    confirmBtn.disabled = false;
     confirmBtn.textContent = 'Reserve My Complimentary Bhog';
   }
 }
