@@ -274,7 +274,6 @@
   .btn-primary{background:var(--marigold);color:#fff;}
   .btn-primary:disabled{background:#d9c8b8;color:#fff;cursor:not-allowed;}
   .btn-outline{background:#fff;border:1.5px solid var(--maroon);color:var(--maroon);}
-  .btn-danger{background:#fff;border:1.5px solid #8a1f1f;color:#8a1f1f;}
   .btn-block{width:100%;}
   .btn-ghost{background:transparent;border:none;color:var(--maroon);font-weight:700;text-decoration:underline;padding:6px;}
 
@@ -318,6 +317,7 @@
   }
   .ticket-body{padding:16px;}
   .ticket-name{text-align:center;font-family:'Baloo 2',cursive;font-weight:700;font-size:17px;}
+  .ticket-phone{text-align:center;font-size:12.5px;color:#8a6a55;margin-bottom:4px;}
   .ticket-pay{text-align:center;font-size:11.5px;color:#8a6a55;margin-bottom:10px;}
   .ticket-item{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;border-bottom:1px dashed var(--line);gap:10px;}
   .ticket-item:last-child{border-bottom:none;}
@@ -426,10 +426,16 @@
           <label for="userName">Full name</label>
           <input type="text" id="userName" placeholder="e.g. Ritwik Sen" autocomplete="name">
         </div>
-        <div class="field">
-          <label for="userFlat">Flat / Block (A1, A2, B, C1, C2, C3)</label>
-          <input type="text" id="userFlat" placeholder="e.g. A1-204, B-101" autocomplete="off">
-          <div id="flatHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Flat must start with Block A1, A2, B, C1, C2, or C3 (e.g. A1-102, B-301).</div>
+        <div class="row2">
+          <div class="field">
+            <label for="userPhone">Mobile number</label>
+            <input type="tel" id="userPhone" placeholder="10-digit number" maxlength="10" autocomplete="tel">
+          </div>
+          <div class="field">
+            <label for="userFlat">Flat / Block (A1, A2, B, C1, C2, C3)</label>
+            <input type="text" id="userFlat" placeholder="e.g. A1-204, B-101" autocomplete="off">
+            <div id="flatHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Flat must start with Block A1, A2, B, C1, C2, or C3 (e.g. A1-102, B-301).</div>
+          </div>
         </div>
         <p style="margin:0;">
           <button class="btn-ghost" onclick="openMyCoupons()">Already booked? Find my coupons →</button>
@@ -479,7 +485,7 @@
               </div>
             </div>
 
-            <div class="note">Payments are collected directly by the puja committee's UPI ID. A volunteer verifies each payment against the committee's UPI statement (using your name / flat / UTR) and marks it "Verified" from the Committee tab. Your QR coupons unlock automatically once that happens.</div>
+            <div class="note">Payments are collected directly by the puja committee's UPI ID. A volunteer verifies each payment against the committee's UPI statement (using your name / phone / UTR) and marks it "Verified" from the Committee tab. Your QR coupons unlock automatically once that happens.</div>
           </div>
 
           <div id="cashFlow" class="hidden">
@@ -489,17 +495,6 @@
 
         <div id="freeSection" class="hidden">
           <div class="note good" style="margin-top:14px;">🎁 This order is fully complimentary — no payment needed. Just confirm below to reserve your bhog.</div>
-        </div>
-
-        <!-- Privacy & Terms Advisory -->
-        <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);">
-          <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name and Flat Number are stored securely to generate, manage, and verify your Durga Puja food coupons. You reserve the right to search or request deletion of your booking records at any time.
-        </div>
-        <div class="field" style="margin-top:10px;">
-          <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
-            <input type="checkbox" id="privacyTermsConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;">
-            <span style="font-size:13px; color:var(--maroon-dark);">I accept the Data Privacy Terms &amp; Conditions.</span>
-          </label>
         </div>
 
         <button class="btn btn-primary btn-block" id="confirmBookingBtn" style="margin-top:12px;" onclick="confirmBooking()" disabled>Confirm Booking &amp; Get QR Coupon</button>
@@ -513,15 +508,10 @@
     <div id="myCouponsView" class="hidden">
       <div class="card">
         <p class="section-label">🔍 Find my coupons</p>
-        <div class="field">
-          <label for="searchName">Full Name</label>
-          <input type="text" id="searchName" placeholder="Enter full name">
+        <div class="search-row">
+          <input type="tel" id="searchPhone" placeholder="Enter your 10-digit mobile number" maxlength="10">
+          <button class="btn btn-primary" onclick="searchMyCoupons()">Search</button>
         </div>
-        <div class="field">
-          <label for="searchFlat">Flat / Block</label>
-          <input type="text" id="searchFlat" placeholder="e.g. A1-204">
-        </div>
-        <button class="btn btn-primary btn-block" onclick="searchMyCoupons()">Search Coupons</button>
         <p style="margin:10px 0 0;"><button class="btn-ghost" onclick="backToBookForm()">← Back to booking</button></p>
       </div>
       <div id="myCouponsResults"></div>
@@ -555,7 +545,7 @@
       <div class="card">
         <p class="section-label">⌨️ Or Look Up Booking Manually</p>
         <div class="search-row">
-          <input type="text" id="serveLookupInput" placeholder="Order ID, Name or Flat">
+          <input type="text" id="serveLookupInput" placeholder="Order ID or 10-digit phone">
           <button class="btn btn-primary" onclick="doLookupDirect('serveLookupInput')">Find</button>
         </div>
       </div>
@@ -628,7 +618,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, onSnapshot
+    getFirestore, doc, setDoc, getDoc, collection, query, where, getDocs, onSnapshot
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -654,11 +644,6 @@
     return snap.exists() ? snap.data() : null;
   };
 
-  window.dbDeleteBooking = async function(orderId) {
-    const ref = doc(db, "bookings", orderId.toUpperCase().trim());
-    await deleteDoc(ref);
-  };
-
   window.dbListenToBooking = function(orderId, callback) {
     const ref = doc(db, "bookings", orderId.toUpperCase().trim());
     return onSnapshot(ref, (snap) => {
@@ -666,19 +651,11 @@
     });
   };
 
-  window.dbGetBookingsByNameAndFlat = async function(name, flat) {
-    const q = query(
-      collection(db, "bookings"), 
-      where("flatNumber", "==", flat.trim())
-    );
+  window.dbGetBookingsByPhone = async function(phone) {
+    const q = query(collection(db, "bookings"), where("phone", "==", phone));
     const snap = await getDocs(q);
     const results = [];
-    snap.forEach(d => {
-      const data = d.data();
-      if(data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim()) {
-        results.push(data);
-      }
-    });
+    snap.forEach(d => results.push(d.data()));
     return results;
   };
 
@@ -981,14 +958,7 @@ function validateFlatNumber(flatStr) {
 
 function validateConfirmButtonState(){
   const confirmBtn = document.getElementById('confirmBookingBtn');
-  const termsChecked = document.getElementById('privacyTermsConfirm').checked;
   const total = grandTotal();
-
-  if(!termsChecked) {
-    confirmBtn.disabled = true;
-    return;
-  }
-
   if(total === 0){ confirmBtn.disabled = false; return; }
 
   if(selectedPaymentMethod === 'cash'){
@@ -1020,9 +990,7 @@ function validateConfirmButtonState(){
 }
 
 document.addEventListener('change', (e)=>{
-  if(e.target && (e.target.id==='paidConfirm' || e.target.id==='privacyTermsConfirm')) {
-    validateConfirmButtonState();
-  }
+  if(e.target && e.target.id==='paidConfirm') validateConfirmButtonState();
 });
 document.addEventListener('input', (e)=>{
   if(e.target && e.target.id==='utrInput') validateConfirmButtonState();
@@ -1040,10 +1008,11 @@ document.addEventListener('input', (e)=>{
 /* ================= review & payment ================= */
 function goToReview(){
   const name = document.getElementById('userName').value.trim();
+  const phone = document.getElementById('userPhone').value.trim();
   const flat = document.getElementById('userFlat').value.trim();
   
-  if(!name){
-    alert('Please enter your full name.');
+  if(!name || !/^\d{10}$/.test(phone)){
+    alert('Please enter your name and a valid 10-digit mobile number.');
     return;
   }
   if(!validateFlatNumber(flat)){
@@ -1093,7 +1062,6 @@ function goToReview(){
     new QRCode(document.getElementById('upiQr'), { text: upiLink, width:150, height:150, colorDark:'#4A0A12', colorLight:'#FFFFFF' });
 
     document.getElementById('paidConfirm').checked = false;
-    document.getElementById('privacyTermsConfirm').checked = false;
     document.getElementById('utrContainer').classList.add('hidden');
     document.getElementById('utrInput').value = '';
     document.getElementById('utrHelpText').classList.add('hidden');
@@ -1102,8 +1070,7 @@ function goToReview(){
   } else {
     paidSection.classList.add('hidden');
     freeSection.classList.remove('hidden');
-    document.getElementById('privacyTermsConfirm').checked = false;
-    confirmBtn.disabled = true;
+    confirmBtn.disabled = false;
     confirmBtn.textContent = 'Reserve My Complimentary Bhog';
   }
 
@@ -1120,6 +1087,7 @@ function genOrderId(){
 
 async function confirmBooking(){
   const name = document.getElementById('userName').value.trim();
+  const phone = document.getElementById('userPhone').value.trim();
   const flat = document.getElementById('userFlat').value.trim();
   const utrEl = document.getElementById('utrInput');
   const utr = utrEl ? utrEl.value.trim() : '';
@@ -1154,7 +1122,7 @@ async function confirmBooking(){
 
   const orderId = genOrderId();
   const booking = {
-    orderId, name, flatNumber: flat, items,
+    orderId, name, phone, flatNumber: flat, items,
     total,
     paymentMethod,
     utr: (paymentMethod==='upi') ? (utr || null) : null,
@@ -1222,6 +1190,7 @@ function renderBookingMealsHtml(b){
       const typeTag = it.type ? `<span class="tag ${it.type==='veg'?'veg':'nonveg'}">${it.type==='veg'?'Veg':'Non-veg'}</span>` : '';
       const freeTag = it.complimentary ? `<span class="tag free">FREE</span>` : '';
       
+      // Parcel / Dine-in Tag Formatting
       const parcelCount = it.parcelQty || 0;
       const dineInCount = (it.qty || 0) - parcelCount;
       let packagingTags = '';
@@ -1277,40 +1246,28 @@ function renderTicket(b){
       <div class="perf"></div>
       <div class="ticket-body">
         <div class="ticket-name">${escapeHtml(b.name)}</div>
-        <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
+        <div class="ticket-phone">${b.phone}${b.flatNumber?' · Flat '+escapeHtml(b.flatNumber):''}</div>
         <div class="ticket-pay">${paymentMethodLabel(b)}</div>
         ${renderBookingMealsHtml(b)}
         <div class="ticket-item" style="margin-top:6px;"><span class="lbl">Total ${b.total>0?'payable':''}</span><span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span></div>
       </div>
     </div>
     <div class="note">Each meal has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
-    <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}')">Book More Coupons</button>
-    <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
+    <button class="btn btn-outline btn-block" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.phone)}', '${escapeHtml(b.flatNumber||'')}')">Book More Coupons</button>
   `;
   mountMealQrCodes(b);
 }
 
-async function deleteUserBooking(orderId) {
-  if(!confirm('Are you sure you want to delete this booking and remove your personal data? This action cannot be undone.')) return;
-  try {
-    await window.dbDeleteBooking(orderId);
-    showToast('🗑️ Booking data deleted successfully.', 'warn');
-    startOver();
-  } catch(e) {
-    alert('Failed to delete booking data. Please try again.');
-  }
-}
-
-function startOver(existingName = '', existingFlat = ''){
+function startOver(existingName = '', existingPhone = '', existingFlat = ''){
   if(ticketUnsubscribe) ticketUnsubscribe();
   cart = {}; lastBooking = null; selectedPaymentMethod = null;
   
   document.getElementById('userName').value = existingName;
+  document.getElementById('userPhone').value = existingPhone;
   document.getElementById('userFlat').value = existingFlat;
   
   if(document.getElementById('utrInput')) document.getElementById('utrInput').value='';
   if(document.getElementById('paidConfirm')) document.getElementById('paidConfirm').checked = false;
-  if(document.getElementById('privacyTermsConfirm')) document.getElementById('privacyTermsConfirm').checked = false;
   document.getElementById('confirmBookingBtn').disabled = true;
   document.getElementById('reviewCard').style.display = 'none';
   document.getElementById('ticketView').classList.add('hidden');
@@ -1338,19 +1295,13 @@ function backToBookForm(){
   refreshStickyVisibility();
 }
 async function searchMyCoupons(){
-  const name = document.getElementById('searchName').value.trim();
-  const flat = document.getElementById('searchFlat').value.trim();
+  const phone = document.getElementById('searchPhone').value.trim();
   const results = document.getElementById('myCouponsResults');
-  
-  if(!name || !validateFlatNumber(flat)){ 
-    results.innerHTML = '<div class="empty">Enter a valid full name and flat number (starting with A1, A2, B, C1, C2, or C3).</div>'; 
-    return; 
-  }
-  
+  if(!/^\d{10}$/.test(phone)){ results.innerHTML = '<div class="empty">Enter a valid 10-digit number.</div>'; return; }
   results.innerHTML = '<div class="empty">Searching…</div>';
   try{
-    const matches = await window.dbGetBookingsByNameAndFlat(name, flat);
-    if(matches.length===0){ results.innerHTML = '<div class="empty">No bookings found for these details.</div>'; return; }
+    const matches = await window.dbGetBookingsByPhone(phone);
+    if(matches.length===0){ results.innerHTML = '<div class="empty">No bookings found for this number yet.</div>'; return; }
     matches.sort((a,b)=>b.createdAt-a.createdAt);
     results.innerHTML='';
     matches.forEach(b=>{
@@ -1374,7 +1325,7 @@ function renderMiniTicketInto(container, b){
     <div class="perf"></div>
     <div class="ticket-body">
       <div class="ticket-name">${escapeHtml(b.name)}</div>
-      <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
+      <div class="ticket-phone">${b.phone}${b.flatNumber?' · Flat '+escapeHtml(b.flatNumber):''}</div>
       <div class="ticket-pay">${paymentMethodLabel(b)}</div>
       ${renderBookingMealsHtml(b)}
     </div>`;
@@ -1437,22 +1388,15 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
   if(!queryVal){ results.innerHTML=''; return; }
 
   let matches = [];
-  const b = await fetchBooking(queryVal);
-  if(b) {
-    matches.push(b);
-  } else {
-    // Search across all bookings if name or flat matches query
-    const all = await window.dbGetAllBookings();
-    const qLower = queryVal.toLowerCase();
-    all.forEach(item => {
-      if((item.name && item.name.toLowerCase().includes(qLower)) || (item.flatNumber && item.flatNumber.toLowerCase().includes(qLower))) {
-        matches.push(item);
-      }
-    });
+  if(/^\d{10}$/.test(queryVal)){
+    matches = await window.dbGetBookingsByPhone(queryVal);
+  }else{
+    const b = await fetchBooking(queryVal);
+    if(b) matches.push(b);
   }
 
   if(matches.length===0){
-    results.innerHTML = '<div class="card"><div class="empty">No booking found for that Order ID / Name / Flat.</div></div>';
+    results.innerHTML = '<div class="card"><div class="empty">No booking found for that Order ID / phone number.</div></div>';
     return;
   }
   results.innerHTML='';
@@ -1478,7 +1422,7 @@ function paintLookupCard(b, isFromFoodCounter = false){
     <div class="lc-head">
       <div>
         <div class="lc-name">${escapeHtml(b.name)}</div>
-        <div class="lc-oid">${b.orderId}${b.flatNumber?' · Flat '+escapeHtml(b.flatNumber):''}${methodTag?' · '+methodTag:''}</div>
+        <div class="lc-oid">${b.orderId} · ${b.phone}${b.flatNumber?' · Flat '+escapeHtml(b.flatNumber):''}${methodTag?' · '+methodTag:''}</div>
       </div>
       <span class="pay-badge ${b.paymentStatus}">${badgeText}</span>
     </div>
@@ -1587,8 +1531,8 @@ async function loadPendingPayments(){
       const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
       row.innerHTML = `
         <div class="dr-info">
-          <div class="dr-meal">${escapeHtml(b.name)} · Flat ${escapeHtml(b.flatNumber||'')} · ₹${b.total}</div>
-          <div class="dr-sub">${b.orderId} · ${methodTag}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
+          <div class="dr-meal">${escapeHtml(b.name)} · ₹${b.total}</div>
+          <div class="dr-sub">${b.orderId} · ${b.phone} · ${methodTag}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
         </div>
         <button class="btn btn-outline" onclick="reviewPendingPayment('${b.orderId}')">Review</button>
       `;
@@ -1638,13 +1582,13 @@ async function generateReports() {
   }
 }
 
-/* EXPORT CSV WITHOUT PHONE NUMBER */
+/* ENHANCED EXPORT CSV WITH MEAL SELECTIONS & PARCEL BREAKDOWN */
 async function exportBookingsCSV() {
   try {
     const all = await window.dbGetAllBookings();
     if(all.length === 0) { alert('No data to export.'); return; }
 
-    let csv = 'Order ID,Name,Flat,Payment Method,Total (INR),Payment Status,UTR,Total Plates Booked,Total Plates Served,Booked Meals Summary,Created At\n';
+    let csv = 'Order ID,Name,Phone,Flat,Payment Method,Total (INR),Payment Status,UTR,Total Plates Booked,Total Plates Served,Booked Meals Summary,Created At\n';
     all.forEach(b => {
       const created = new Date(b.createdAt).toLocaleString();
       
@@ -1660,7 +1604,7 @@ async function exportBookingsCSV() {
         return `${it.dayLabel} ${it.mealLabel}${typeStr} x${it.qty}${pkgStr} [Served:${it.delivered}/${it.qty}]`;
       }).join(' ; ');
 
-      csv += `"${b.orderId}","${b.name}","${b.flatNumber||''}","${b.paymentMethod||''}",${b.total},"${b.paymentStatus}","${b.utr||''}",${totalBookedPlates},${totalServedPlates},"${mealDetails}","${created}"\n`;
+      csv += `"${b.orderId}","${b.name}","${b.phone}","${b.flatNumber||''}","${b.paymentMethod||''}",${b.total},"${b.paymentStatus}","${b.utr||''}",${totalBookedPlates},${totalServedPlates},"${mealDetails}","${created}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
