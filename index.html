@@ -1299,7 +1299,12 @@ function renderMealRows(){
 
     if(!m.hasVariant || info.forced) {
       let subTotal = row.vegQty * info.vegPrice + row.vegParcel * CONFIG.parcelCharge;
-      chipsHtml = info.vegItems.map(i=>`<span class="chip">${i}</span>`).join('');
+      
+      // Only show menu chips if qty > 0
+      if (row.vegQty > 0) {
+        chipsHtml = info.vegItems.map(i=>`<span class="chip">${i}</span>`).join('');
+      }
+
       variantsHtml = `
         <div class="variant-row veg">
           <div class="variant-info">
@@ -1334,15 +1339,13 @@ function renderMealRows(){
       let nonvegSub = row.nonvegQty * info.nonvegPrice + row.nonvegParcel * CONFIG.parcelCharge;
       let totalMealSub = vegSub + nonvegSub;
 
-      // Render respective item chips based on what is active/selected, or show both cleanly
+      // Only show chips for the variant that has been selected (> 0)
       let activeChips = [];
-      if (row.vegQty > 0 && row.nonvegQty === 0) {
-        activeChips = info.vegItems;
-      } else if (row.nonvegQty > 0 && row.vegQty === 0) {
-        activeChips = info.nonvegItems;
-      } else {
-        // If both or neither selected, show both sections or default to veg
-        activeChips = [...new Set([...info.vegItems, ...info.nonvegItems])];
+      if (row.vegQty > 0) {
+        activeChips = activeChips.concat(info.vegItems);
+      }
+      if (row.nonvegQty > 0) {
+        activeChips = activeChips.concat(info.nonvegItems);
       }
       chipsHtml = activeChips.map(i=>`<span class="chip">${i}</span>`).join('');
 
@@ -1414,7 +1417,7 @@ function renderMealRows(){
         </div>
       </div>
       ${variantsHtml}
-      <div class="chips" style="margin-top:10px;">${chipsHtml}</div>
+      ${chipsHtml ? `<div class="chips" style="margin-top:10px;">${chipsHtml}</div>` : ''}
       ${info.note ? `<div class="note good" style="margin-top:9px;">${info.note}</div>` : ''}
     `;
     wrap.appendChild(el);
