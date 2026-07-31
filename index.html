@@ -716,13 +716,16 @@
     });
   };
 
-  /* PUJA SUBSCRIPTION VERIFICATION CHECK */
+  /* CASE-INSENSITIVE & DASH-FLEXIBLE PUJA SUBSCRIPTION VERIFICATION CHECK */
   window.dbCheckSubscription = async function(fullFlatNumber) {
-    const ref = doc(db, "puja_subscriptions", fullFlatNumber.trim());
+    // Normalizes en-dashes/em-dashes to standard hyphens
+    const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
+    const ref = doc(db, "puja_subscriptions", cleanFlatId);
     const snap = await getDoc(ref);
     if(snap.exists()) {
       const data = snap.data();
-      return data.status === 'Paid';
+      // Case-insensitive status check ('paid', 'Paid', or 'PAID')
+      return data.status && data.status.toString().toLowerCase().trim() === 'paid';
     }
     return false;
   };
