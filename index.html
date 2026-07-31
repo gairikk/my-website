@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/jsqr@1.4.0/dist/jsQR.js';"></script>
+<!-- html2canvas for downloading ticket as PNG -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <style>
   :root{
@@ -31,7 +33,7 @@
     font-size:16px;
     line-height:1.45;
     -webkit-tap-highlight-color:transparent;
-    padding-bottom:86px;
+    padding-bottom:24px;
   }
   h1,h2,h3,.display{font-family:'Baloo 2',cursive;}
   .hidden{display:none !important;}
@@ -112,6 +114,57 @@
     background:var(--gold);
     border-color:var(--gold);
     color:var(--maroon-dark);
+  }
+
+  /* ---------- Progress Stepper Bar ---------- */
+  .stepper-bar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:14px;
+    padding:10px 14px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+  }
+  .step-item{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12.5px;
+    font-weight:700;
+    color:#8a6a55;
+  }
+  .step-item.active{ color:var(--maroon); }
+  .step-item.completed{ color:var(--green); }
+  .step-num{
+    width:20px; height:20px; border-radius:50%;
+    background:#e0d2c3; color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:800;
+  }
+  .step-item.active .step-num{ background:var(--marigold); }
+  .step-item.completed .step-num{ background:var(--green); }
+  .step-line{ flex:1; height:2px; background:var(--line); margin:0 6px; }
+
+  /* ---------- Operating Hours Badge ---------- */
+  .timing-badge{
+    display:inline-block;
+    font-size:11px;
+    font-weight:600;
+    color:var(--maroon);
+    background:#FFF3E8;
+    border:1px solid rgba(232,121,45,0.3);
+    padding:2px 8px;
+    border-radius:6px;
+    margin-top:4px;
+  }
+
+  /* ---------- Step Navigation Buttons ---------- */
+  .step-actions{
+    display:flex;
+    gap:10px;
+    margin-top:16px;
   }
 
   /* ---------- Layout ---------- */
@@ -255,17 +308,6 @@
 
   .row-subtotal{text-align:right;font-size:12.5px;color:#8a6a55;margin-top:6px;}
 
-  /* sticky total bar */
-  .sticky-bar{
-    position:fixed;left:0;right:0;bottom:0;
-    background:#fff;border-top:1.5px solid var(--line);
-    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
-    display:flex;align-items:center;justify-content:space-between;gap:12px;
-    z-index:40;
-    box-shadow:0 -4px 16px rgba(43,15,15,0.08);
-  }
-  .sticky-bar .amt{font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;color:var(--maroon);}
-  .sticky-bar .amt small{display:block;font-family:'Hind Siliguri';font-weight:500;font-size:11px;color:#8a6a55;}
   .btn{
     border:none;border-radius:12px;padding:12px 18px;
     font-family:'Hind Siliguri',sans-serif;font-weight:700;font-size:14.5px;
@@ -420,8 +462,25 @@
   <div id="view-book">
 
     <div id="bookForm">
-      <div class="card">
+      
+      <!-- STEPPER PROGRESS BAR -->
+      <div class="stepper-bar">
+        <div class="step-item active" id="step1Indicator"><span class="step-num">1</span> Details</div>
+        <div class="step-line"></div>
+        <div class="step-item" id="step2Indicator"><span class="step-num">2</span> Meals</div>
+        <div class="step-line"></div>
+        <div class="step-item" id="step3Indicator"><span class="step-num">3</span> Review</div>
+      </div>
+
+      <!-- STEP 1: Details Card -->
+      <div class="card" id="step1Card">
         <p class="section-label"><span class="num">1</span>Your details</p>
+
+        <!-- BOOKING CUT-OFF ADVISORY DISCLAIMER -->
+        <div class="note alert" style="margin-top:0; margin-bottom:14px; background:#FFF3E8; border-color:var(--marigold);">
+          ⏳ <strong>Booking Cut-Off Notice:</strong> Online food coupon bookings close on <strong>October 15th at 11:59 PM</strong>. No further additions, changes, or late requests will be entertained after the cut-off date to assist kitchen preparations.
+        </div>
+
         <div class="field">
           <label for="userName">Full name</label>
           <input type="text" id="userName" placeholder="e.g. Ritwik Sen" autocomplete="name">
@@ -454,21 +513,43 @@
 
         <div class="field" style="margin-top:12px;">
           <label for="userPin">Set 4-Digit Security PIN (to lock &amp; access your coupons)</label>
-          <input type="password" id="userPin" placeholder="e.g. 1234" maxlength="4" autocomplete="off">
+          <input type="password" id="userPin" placeholder="e.g. 1234" maxlength="4" autocomplete="off" oninput="validateStep1()">
           <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;">Remember this PIN. It prevents others from accessing your flat's coupons.</div>
         </div>
 
-        <p style="margin:0;">
+        <!-- Privacy Advisory in Step 1 -->
+        <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);">
+          <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name, Flat Number, and PIN are stored securely to manage and verify your food coupons.
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
+            <input type="checkbox" id="privacyTermsConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;" onchange="validateStep1()">
+            <span style="font-size:13px; color:var(--maroon-dark);">I accept the Data Privacy Terms &amp; Conditions.</span>
+          </label>
+        </div>
+
+        <div class="step-actions">
+          <button class="btn btn-primary btn-block" id="btnNextToStep2" onclick="goToStep(2)" disabled>Next: Choose Meals →</button>
+        </div>
+
+        <p style="margin:12px 0 0; text-align:center;">
           <button class="btn-ghost" onclick="openMyCoupons()">Already booked? Find my coupons →</button>
         </p>
       </div>
 
-      <div class="card">
+      <!-- STEP 2: Choose Meals Card -->
+      <div class="card" id="chooseMealsCard" style="display:none;">
         <p class="section-label"><span class="num">2</span>Choose your meals</p>
         <div class="day-pills" id="dayPills"></div>
         <div id="mealRows"></div>
+
+        <div class="step-actions">
+          <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-primary" style="flex:1;" id="btnNextToStep3" onclick="goToStep(3)" disabled>Next: Review Order →</button>
+        </div>
       </div>
 
+      <!-- STEP 3: Review & Confirm Card -->
       <div class="card" id="reviewCard" style="display:none;">
         <p class="section-label"><span class="num">3</span>Review &amp; confirm</p>
         <div id="summaryRows"></div>
@@ -493,7 +574,7 @@
 
             <div class="field" style="margin-top:14px;">
               <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
-                <input type="checkbox" id="paidConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;">
+                <input type="checkbox" id="paidConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;" onchange="toggleUtrBox()">
                 <span style="font-size:13.5px;">I have completed the UPI payment for ₹<span id="paidAmountLbl">0</span></span>
               </label>
             </div>
@@ -501,7 +582,7 @@
             <div id="utrContainer" class="hidden" style="margin-top:12px;">
               <div class="field">
                 <label for="utrInput">12-Digit UPI UTR / Reference Number <span style="color:#8a1f1f;">*</span></label>
-                <input type="tel" id="utrInput" placeholder="Enter 12-digit UTR from payment app" maxlength="12" autocomplete="off">
+                <input type="tel" id="utrInput" placeholder="Enter 12-digit UTR from payment app" maxlength="12" autocomplete="off" oninput="validateConfirmButtonState()">
                 <div id="utrHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Please enter exactly 12 numeric digits from your UPI transaction receipt.</div>
               </div>
             </div>
@@ -518,18 +599,10 @@
           <div class="note good" style="margin-top:14px;">🎁 This order is fully complimentary — no payment needed. Just confirm below to reserve your bhog.</div>
         </div>
 
-        <!-- Privacy & Terms Advisory -->
-        <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);">
-          <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name, Flat Number, and PIN are stored securely to manage and verify your food coupons.
+        <div class="step-actions" style="margin-top:16px;">
+          <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
+          <button class="btn btn-primary" style="flex:1;" id="confirmBookingBtn" onclick="confirmBooking()" disabled>Confirm Booking &amp; Get QR Coupon</button>
         </div>
-        <div class="field" style="margin-top:10px;">
-          <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
-            <input type="checkbox" id="privacyTermsConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;">
-            <span style="font-size:13px; color:var(--maroon-dark);">I accept the Data Privacy Terms &amp; Conditions.</span>
-          </label>
-        </div>
-
-        <button class="btn btn-primary btn-block" id="confirmBookingBtn" style="margin-top:12px;" onclick="confirmBooking()" disabled>Confirm Booking &amp; Get QR Coupon</button>
       </div>
     </div>
 
@@ -654,7 +727,49 @@
 
         <div id="reportMealBreakdown" style="margin-top:14px; font-size:13px; color:#6b4a3a;"></div>
 
-        <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="exportBookingsCSV()">📥 Export All Bookings (CSV)</button>
+        <!-- EXPORT REPORTS SECTION -->
+        <p class="section-label" style="margin-top:16px; margin-bottom:8px;">📥 Export Reports</p>
+        <button class="btn btn-primary btn-block" onclick="exportBookingsCSV()">Download Full Master Report (CSV)</button>
+        <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="exportCookSummaryCSV()">👨‍🍳 Download Kitchen Prep Forecast for Cook (CSV)</button>
+
+        <div style="margin-top:12px;">
+          <label for="dayExportSelect">Export Specific Puja Day Report:</label>
+          <div class="row2">
+            <select id="dayExportSelect" style="flex:1;">
+              <option value="d1">Saptami</option>
+              <option value="d2">Ashtami</option>
+              <option value="d3">Navami</option>
+              <option value="d4">Dashami</option>
+            </select>
+            <button class="btn btn-primary" onclick="exportPerDayCSV()">Export Day</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FLAT BOOKING LOOKUP FEATURE -->
+      <div class="card">
+        <p class="section-label">🏢 Flat Booking Lookup</p>
+        <div class="row2">
+          <div class="field">
+            <label for="adminBlockSelect">Block</label>
+            <select id="adminBlockSelect" onchange="onAdminBlockChange()">
+              <option value="">-- Block --</option>
+              <option value="A1">A1</option>
+              <option value="A2">A2</option>
+              <option value="B">B</option>
+              <option value="C1">C1</option>
+              <option value="C2">C2</option>
+              <option value="C3">C3</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="adminFlatSelect">Flat</label>
+            <select id="adminFlatSelect" disabled>
+              <option value="">-- Flat --</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="searchFlatBookingsAdmin()">Find Flat Bookings</button>
       </div>
 
       <div class="card">
@@ -668,11 +783,6 @@
   </div>
 
 </main>
-
-<div class="sticky-bar" id="stickyBar">
-  <div class="amt">₹<span id="stickyTotal">0</span><small>Estimated total</small></div>
-  <button class="btn btn-primary" id="stickyBtn" onclick="goToReview()">Review &amp; Confirm</button>
-</div>
 
 <!-- ================= FIREBASE MODULE INITIALIZATION ================= -->
 <script type="module">
@@ -718,13 +828,11 @@
 
   /* CASE-INSENSITIVE & DASH-FLEXIBLE ANNUAL FESTIVAL SUBSCRIPTION VERIFICATION CHECK */
   window.dbCheckSubscription = async function(fullFlatNumber) {
-    // Normalizes en-dashes/em-dashes to standard hyphens
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const ref = doc(db, "puja_subscriptions", cleanFlatId);
     const snap = await getDoc(ref);
     if(snap.exists()) {
       const data = snap.data();
-      // Case-insensitive status check ('paid', 'Paid', or 'PAID')
       return data.status && data.status.toString().toLowerCase().trim() === 'paid';
     }
     return false;
@@ -746,6 +854,14 @@
         results.push(data);
       }
     });
+    return results;
+  };
+
+  window.dbGetBookingsByFlat = async function(flat) {
+    const q = query(collection(db, "bookings"), where("flatNumber", "==", flat.trim()));
+    const snap = await getDocs(q);
+    const results = [];
+    snap.forEach(d => results.push(d.data()));
     return results;
   };
 
@@ -772,6 +888,7 @@ const CONFIG = {
   upiId: "xxx@ybl",
   upiName: "xxx xxx",
   committeePin: "7576",
+  hmacSecretKey: "BHOG_BELA_SECRET_2026", // Secret Key for offline HMAC QR signing
   parcelCharge: 15,
 
   days: [
@@ -795,10 +912,13 @@ const CONFIG = {
     {
       id:'breakfast', label:'Breakfast', hasVariant:false,
       price:40,
+      hours: '8:00 AM – 10:30 AM',
       items:['Luchi', 'Alur Dom', 'Cholar Dal', 'Mishti']
     },
     {
       id:'lunch', label:'Lunch', hasVariant:true,
+      price:90,
+      hours: '12:30 PM – 3:30 PM',
       variants:{
         veg:    { price:90,  items:['Rice / Khichuri', 'Labra (mixed veg)', 'Dal', 'Chutney', 'Papad', 'Mishti'] },
         nonveg: { price:150, items:['Rice', 'Chicken Kosha', 'Dal', 'Chutney', 'Papad', 'Mishti'] }
@@ -806,6 +926,8 @@ const CONFIG = {
     },
     {
       id:'dinner', label:'Dinner', hasVariant:true,
+      price:90,
+      hours: '8:00 PM – 10:30 PM',
       variants:{
         veg:    { price:90,  items:['Rice / Luchi', 'Aloo Dum', 'Paneer Curry', 'Chutney', 'Mishti'] },
         nonveg: { price:150, items:['Rice', 'Chicken Curry', 'Dal', 'Chutney', 'Mishti'] }
@@ -821,7 +943,74 @@ let lastBooking = null;
 let camStream = null, camLoopHandle = null;
 let ticketUnsubscribe = null;
 let selectedPaymentMethod = null;
-let isSubscriptionPaid = false; // Tracks subscription status
+let isSubscriptionPaid = false;
+let currentStep = 1;
+
+/* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR & VERIFIER */
+async function generateHMACSignature(dataStr) {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw", enc.encode(CONFIG.hmacSecretKey),
+    { name: "HMAC", hash: "SHA-256" },
+    false, ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(dataStr));
+  const hashArray = Array.from(new Uint8Array(sig));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 8); // 8-char HMAC signature
+}
+
+/* MULTI-STEP NAVIGATION CONTROL & STEPPER UI */
+function goToStep(stepNumber) {
+  if (stepNumber === 2) {
+    const name = document.getElementById('userName').value.trim();
+    const block = document.getElementById('blockSelect').value;
+    const flat = document.getElementById('flatSelect').value;
+    const userPin = document.getElementById('userPin').value.trim();
+    const terms = document.getElementById('privacyTermsConfirm').checked;
+
+    if (!name) { alert('Please enter your full name.'); return; }
+    if (!block || !flat) { alert('Please select your Block and Flat number.'); return; }
+    if (!isSubscriptionPaid) { alert('Annual Festival Subscription is unpaid for this flat.'); return; }
+    if (!/^\d{4}$/.test(userPin)) { alert('Please enter a 4-digit PIN.'); return; }
+    if (!terms) { alert('Please accept the Data Privacy Terms & Conditions.'); return; }
+  }
+
+  if (stepNumber === 3) {
+    if (itemCount() <= 0) { alert('Please select at least one meal to proceed.'); return; }
+    prepareReviewStep();
+  }
+
+  currentStep = stepNumber;
+  document.getElementById('step1Card').style.display = (stepNumber === 1) ? 'block' : 'none';
+  document.getElementById('chooseMealsCard').style.display = (stepNumber === 2) ? 'block' : 'none';
+  document.getElementById('reviewCard').style.display = (stepNumber === 3) ? 'block' : 'none';
+
+  // Update Stepper Visual Bar
+  for(let i=1; i<=3; i++){
+    const el = document.getElementById('step'+i+'Indicator');
+    el.classList.toggle('active', i === stepNumber);
+    el.classList.toggle('completed', i < stepNumber);
+  }
+
+  const cardToScroll = stepNumber === 1 ? 'step1Card' : (stepNumber === 2 ? 'chooseMealsCard' : 'reviewCard');
+  document.getElementById(cardToScroll).scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function validateStep1() {
+  const name = document.getElementById('userName').value.trim();
+  const block = document.getElementById('blockSelect').value;
+  const flat = document.getElementById('flatSelect').value;
+  const userPin = document.getElementById('userPin').value.trim();
+  const terms = document.getElementById('privacyTermsConfirm').checked;
+  const nextBtn = document.getElementById('btnNextToStep2');
+
+  const isValid = name.length > 0 && block && flat && isSubscriptionPaid && /^\d{4}$/.test(userPin) && terms;
+  nextBtn.disabled = !isValid;
+}
+
+document.addEventListener('input', (e) => {
+  if (e.target && (e.target.id === 'userName' || e.target.id === 'userPin')) validateStep1();
+});
 
 function generateFlatOptions(block) {
   let options = '<option value="">-- Select Flat --</option>';
@@ -852,6 +1041,7 @@ function onBlockChange() {
     flatSelect.innerHTML = '<option value="">-- Select Block First --</option>';
     flatSelect.disabled = true;
   }
+  validateStep1();
   updateTotals();
 }
 
@@ -863,6 +1053,7 @@ async function checkSubscriptionStatus() {
   if (!block || !flat) {
     msgEl.innerHTML = '';
     isSubscriptionPaid = false;
+    validateStep1();
     updateTotals();
     return;
   }
@@ -884,6 +1075,7 @@ async function checkSubscriptionStatus() {
     isSubscriptionPaid = false;
   }
 
+  validateStep1();
   updateTotals();
 }
 
@@ -895,6 +1087,18 @@ function onSearchBlockChange() {
     flatSelect.disabled = false;
   } else {
     flatSelect.innerHTML = '<option value="">-- Select Block First --</option>';
+    flatSelect.disabled = true;
+  }
+}
+
+function onAdminBlockChange() {
+  const block = document.getElementById('adminBlockSelect').value;
+  const flatSelect = document.getElementById('adminFlatSelect');
+  if (block) {
+    flatSelect.innerHTML = generateFlatOptions(block);
+    flatSelect.disabled = false;
+  } else {
+    flatSelect.innerHTML = '<option value="">-- Flat --</option>';
     flatSelect.disabled = true;
   }
 }
@@ -936,10 +1140,12 @@ function effectiveInfo(dayId, mealId, chosenType){
   return {
     price, items, complimentary, type, forced: !!forced,
     label: (ov && ov.label) || base.label,
+    hours: base.hours || '',
     note: ov ? ov.note : null
   };
 }
 
+/* SOUND & HAPTIC VIBRATION FEEDBACK */
 function playBeep() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -950,6 +1156,11 @@ function playBeep() {
     osc.start();
     osc.stop(ctx.currentTime + 0.15);
   } catch(e) {}
+
+  // Trigger Haptic Vibration if supported on device
+  if ("vibrate" in navigator) {
+    navigator.vibrate([200]);
+  }
 }
 
 /* ================= toast ================= */
@@ -974,14 +1185,7 @@ function switchTab(tab){
   document.getElementById('tabBookBtn').classList.toggle('active', tab==='book');
   document.getElementById('tabServeBtn').classList.toggle('active', tab==='serve');
   document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
-  refreshStickyVisibility();
   if(tab!=='serve') stopCamera();
-}
-
-function refreshStickyVisibility(){
-  const onBookTab = !document.getElementById('view-book').classList.contains('hidden');
-  const formShown = document.getElementById('bookForm').style.display !== 'none';
-  document.getElementById('stickyBar').classList.toggle('hidden', !(onBookTab && formShown));
 }
 
 /* ================= render day pills + meal rows ================= */
@@ -1031,6 +1235,7 @@ function renderMealRows(){
         <div>
           <div class="meal-name">${info.label}</div>
           <div class="meal-price ${info.complimentary?'free-text':''}">${info.complimentary ? 'No charge — offered by the committee' : '₹'+info.price+' / plate'}</div>
+          ${info.hours ? `<div class="timing-badge">⏰ Counter Hours: ${info.hours}</div>` : ''}
         </div>
         <div class="stepper">
           <button ${row.qty<=0?'disabled':''} onclick="changeQty('${activeDay}','${m.id}',-1)">−</button>
@@ -1102,17 +1307,24 @@ function itemCount(){
 }
 
 function updateTotals(){
-  const t = grandTotal();
-  const btn = document.getElementById('stickyBtn');
-  document.getElementById('stickyTotal').textContent = t;
-  
-  // Disable button if no items selected OR subscription is unpaid
+  const step2NextBtn = document.getElementById('btnNextToStep3');
   const canProceed = itemCount() > 0 && isSubscriptionPaid;
-  btn.disabled = !canProceed;
-  btn.style.opacity = canProceed ? 1 : 0.5;
+  step2NextBtn.disabled = !canProceed;
 }
 
-/* ================= payment method ================= */
+/* ================= payment method & UTR toggle ================= */
+function toggleUtrBox() {
+  const isChecked = document.getElementById('paidConfirm').checked;
+  const utrContainer = document.getElementById('utrContainer');
+  
+  if (isChecked) {
+    utrContainer.classList.remove('hidden');
+  } else {
+    utrContainer.classList.add('hidden');
+  }
+  validateConfirmButtonState();
+}
+
 function setPaymentMethod(method){
   selectedPaymentMethod = method;
   document.getElementById('pmCash').classList.toggle('active', method==='cash');
@@ -1124,8 +1336,8 @@ function setPaymentMethod(method){
 
 function validateConfirmButtonState(){
   const confirmBtn = document.getElementById('confirmBookingBtn');
-  const termsChecked = document.getElementById('privacyTermsConfirm').checked;
   const userPin = document.getElementById('userPin').value.trim();
+  const termsChecked = document.getElementById('privacyTermsConfirm').checked;
   const total = grandTotal();
 
   if(!termsChecked || !/^\d{4}$/.test(userPin) || !isSubscriptionPaid) {
@@ -1143,18 +1355,15 @@ function validateConfirmButtonState(){
 
   if(selectedPaymentMethod === 'upi'){
     const isChecked = document.getElementById('paidConfirm').checked;
-    const utrContainer = document.getElementById('utrContainer');
     const utrInput = document.getElementById('utrInput');
     const utrHelp = document.getElementById('utrHelpText');
 
     if(isChecked){
-      utrContainer.classList.remove('hidden');
       const utrVal = utrInput.value.trim();
       const isValidUtr = /^\d{12}$/.test(utrVal);
       utrHelp.classList.toggle('hidden', !(utrVal.length>0 && !isValidUtr));
       confirmBtn.disabled = !isValidUtr;
     } else {
-      utrContainer.classList.add('hidden');
       confirmBtn.disabled = true;
     }
     return;
@@ -1163,40 +1372,9 @@ function validateConfirmButtonState(){
   confirmBtn.disabled = true;
 }
 
-document.addEventListener('change', (e)=>{
-  if(e.target && (e.target.id==='paidConfirm' || e.target.id==='privacyTermsConfirm')) {
-    validateConfirmButtonState();
-  }
-});
-document.addEventListener('input', (e)=>{
-  if(e.target && (e.target.id==='utrInput' || e.target.id==='userPin')) validateConfirmButtonState();
-});
-
 /* ================= review & payment ================= */
-function goToReview(){
+function prepareReviewStep(){
   const name = document.getElementById('userName').value.trim();
-  const block = document.getElementById('blockSelect').value;
-  const flat = document.getElementById('flatSelect').value;
-  const userPin = document.getElementById('userPin').value.trim();
-  
-  if(!isSubscriptionPaid) {
-    alert('Food coupon booking is restricted because the Annual Festival Subscription is unpaid for this flat.');
-    return;
-  }
-  if(!name){
-    alert('Please enter your full name.');
-    return;
-  }
-  if(!block || !flat){
-    alert('Please select both your Block and Flat number from the dropdowns.');
-    return;
-  }
-  if(!/^\d{4}$/.test(userPin)) {
-    alert('Please set a 4-digit numeric Security PIN to protect your coupons.');
-    return;
-  }
-  if(itemCount()<=0){ alert('Please select at least one meal.'); return; }
-
   const summary = document.getElementById('summaryRows');
   summary.innerHTML = '';
   Object.keys(cart).forEach(k=>{
@@ -1238,7 +1416,6 @@ function goToReview(){
     new QRCode(document.getElementById('upiQr'), { text: upiLink, width:150, height:150, colorDark:'#4A0A12', colorLight:'#FFFFFF' });
 
     document.getElementById('paidConfirm').checked = false;
-    document.getElementById('privacyTermsConfirm').checked = false;
     document.getElementById('utrContainer').classList.add('hidden');
     document.getElementById('utrInput').value = '';
     document.getElementById('utrHelpText').classList.add('hidden');
@@ -1247,13 +1424,9 @@ function goToReview(){
   } else {
     paidSection.classList.add('hidden');
     freeSection.classList.remove('hidden');
-    document.getElementById('privacyTermsConfirm').checked = false;
-    confirmBtn.disabled = true;
+    confirmBtn.disabled = false;
     confirmBtn.textContent = 'Reserve My Complimentary Bhog';
   }
-
-  document.getElementById('reviewCard').style.display = 'block';
-  document.getElementById('reviewCard').scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 function genOrderId(){
@@ -1326,7 +1499,6 @@ async function confirmBooking(){
     renderTicket(booking);
     document.getElementById('bookForm').style.display = 'none';
     document.getElementById('ticketView').classList.remove('hidden');
-    refreshStickyVisibility();
     window.scrollTo({top:0, behavior:'smooth'});
 
     if(booking.paymentStatus === 'pending'){
@@ -1341,7 +1513,7 @@ async function confirmBooking(){
   }
 }
 
-/* ================= ticket rendering (per-meal QR) ================= */
+/* ================= TICKET RENDERING (HMAC SECURED QR) ================= */
 function statusLabel(status){
   if(status==='verified') return '✓ Payment verified';
   if(status==='complimentary') return '🎁 Complimentary — no payment required';
@@ -1353,8 +1525,10 @@ function paymentMethodLabel(b){
   return '';
 }
 
-function mealQrPayload(b, it){
-  return `${b.orderId}|${it.day}|${it.meal}|${b.name}`;
+async function mealQrPayloadHMAC(b, it){
+  const rawPayload = `${b.orderId}|${it.day}|${it.meal}|${b.name}`;
+  const hmac = await generateHMACSignature(rawPayload);
+  return `${rawPayload}|${hmac}`; // Append 8-char HMAC signature
 }
 
 function renderBookingMealsHtml(b){
@@ -1403,12 +1577,13 @@ function mountMealQrCodes(b){
   const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
   if(!isUnlocked) return;
   setTimeout(() => {
-    b.items.forEach(it=>{
+    b.items.forEach(async (it) => {
       const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
       const el = document.getElementById(qid);
       if(el){
         el.innerHTML = '';
-        new QRCode(el, { text: mealQrPayload(b,it), width:140, height:140, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
+        const signedPayload = await mealQrPayloadHMAC(b, it);
+        new QRCode(el, { text: signedPayload, width:140, height:140, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
       }
     });
   }, 50);
@@ -1417,26 +1592,44 @@ function mountMealQrCodes(b){
 function renderTicket(b){
   const wrap = document.getElementById('ticketView');
   wrap.innerHTML = `
-    <div class="ticket">
-      <div class="ticket-head">
-        <div style="font-size:12px;letter-spacing:.1em;color:var(--gold-soft);">${CONFIG.eventName}</div>
-        <div class="oid">${b.orderId}</div>
-        <div class="status ${b.paymentStatus}">${statusLabel(b.paymentStatus)}</div>
-      </div>
-      <div class="perf"></div>
-      <div class="ticket-body">
-        <div class="ticket-name">${escapeHtml(b.name)}</div>
-        <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
-        <div class="ticket-pay">${paymentMethodLabel(b)}</div>
-        ${renderBookingMealsHtml(b)}
-        <div class="ticket-item" style="margin-top:6px;"><span class="lbl">Total ${b.total>0?'payable':''}</span><span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span></div>
+    <div id="ticketCaptureArea">
+      <div class="ticket">
+        <div class="ticket-head">
+          <div style="font-size:12px;letter-spacing:.1em;color:var(--gold-soft);">${CONFIG.eventName}</div>
+          <div class="oid">${b.orderId}</div>
+          <div class="status ${b.paymentStatus}">${statusLabel(b.paymentStatus)}</div>
+        </div>
+        <div class="perf"></div>
+        <div class="ticket-body">
+          <div class="ticket-name">${escapeHtml(b.name)}</div>
+          <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
+          <div class="ticket-pay">${paymentMethodLabel(b)}</div>
+          ${renderBookingMealsHtml(b)}
+          <div class="ticket-item" style="margin-top:6px;"><span class="lbl">Total ${b.total>0?'payable':''}</span><span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span></div>
+        </div>
       </div>
     </div>
     <div class="note">Each meal has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
-    <button class="btn btn-outline btn-block" style="margin-top:10px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">Book More Coupons</button>
+    <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
+    <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">Book More Coupons</button>
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
   `;
   mountMealQrCodes(b);
+}
+
+/* DOWNLOAD TICKET AS IMAGE (PNG) */
+function downloadTicketImage(orderId) {
+  const target = document.getElementById('ticketCaptureArea');
+  if(!target) return;
+  showToast('Generating ticket image…', 'good');
+  html2canvas(target, { scale: 2, backgroundColor: null }).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `bhog_bela_coupon_${orderId}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }).catch(e => {
+    alert('Failed to generate image. Please take a screenshot instead.');
+  });
 }
 
 async function deleteUserBooking(orderId) {
@@ -1470,14 +1663,13 @@ function startOver(existingName = '', existingFlat = '', existingPin = ''){
   if(document.getElementById('utrInput')) document.getElementById('utrInput').value='';
   if(document.getElementById('paidConfirm')) document.getElementById('paidConfirm').checked = false;
   if(document.getElementById('privacyTermsConfirm')) document.getElementById('privacyTermsConfirm').checked = false;
-  document.getElementById('confirmBookingBtn').disabled = true;
-  document.getElementById('reviewCard').style.display = 'none';
+  
   document.getElementById('ticketView').classList.add('hidden');
   document.getElementById('bookForm').style.display = 'block';
   activeDay = CONFIG.days[0].id;
   renderDayPills(); renderMealRows(); updateTotals();
-  refreshStickyVisibility();
-  window.scrollTo({top:0, behavior:'smooth'});
+  
+  goToStep(1); // Reset back to Step 1
 }
 
 function escapeHtml(s){
@@ -1489,12 +1681,10 @@ function openMyCoupons(){
   document.getElementById('bookForm').style.display='none';
   document.getElementById('ticketView').classList.add('hidden');
   document.getElementById('myCouponsView').classList.remove('hidden');
-  document.getElementById('stickyBar').classList.add('hidden');
 }
 function backToBookForm(){
   document.getElementById('myCouponsView').classList.add('hidden');
   document.getElementById('bookForm').style.display='block';
-  refreshStickyVisibility();
 }
 async function searchMyCoupons(){
   const name = document.getElementById('searchName').value.trim();
@@ -1581,15 +1771,40 @@ async function saveBooking(b){
 function parseQrPayload(raw){
   const parts = String(raw).split('|');
   if(parts.length>=3){
-    return { orderId: parts[0], day: parts[1], meal: parts[2], name: parts.slice(3).join('|') || null };
+    return { orderId: parts[0], day: parts[1], meal: parts[2], name: parts[3] || null, hmac: parts[4] || null };
   }
-  return { orderId: raw, day:null, meal:null, name:null };
+  return { orderId: raw, day:null, meal:null, name:null, hmac:null };
 }
 
 function doLookupDirect(inputId) {
   const val = document.getElementById(inputId).value.trim();
   const activeTab = document.getElementById('view-serve').classList.contains('hidden') ? 'admin' : 'serve';
   doLookupForTarget(val, activeTab === 'serve' ? 'serveLookupResults' : 'adminLookupResults', activeTab === 'serve');
+}
+
+async function searchFlatBookingsAdmin() {
+  const block = document.getElementById('adminBlockSelect').value;
+  const flat = document.getElementById('adminFlatSelect').value;
+  const results = document.getElementById('adminLookupResults');
+
+  if(!block || !flat) {
+    alert('Please select both Block and Flat.');
+    return;
+  }
+
+  const fullFlatNumber = `${block}-${flat}`;
+  results.innerHTML = '<div class="card"><div class="empty">Loading flat bookings...</div></div>';
+  try {
+    const matches = await window.dbGetBookingsByFlat(fullFlatNumber);
+    if(matches.length === 0) {
+      results.innerHTML = '<div class="card"><div class="empty">No bookings found for Flat ' + fullFlatNumber + '</div></div>';
+      return;
+    }
+    results.innerHTML = '';
+    matches.forEach(b => renderLookupCard(results, b, false));
+  } catch(e) {
+    results.innerHTML = '<div class="card"><div class="empty">Error fetching flat bookings.</div></div>';
+  }
 }
 
 async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter = false){
@@ -1799,44 +2014,129 @@ async function generateReports() {
   }
 }
 
-/* EXPORT CSV WITHOUT PHONE NUMBER */
+/* 1. MASTER REPORT CSV EXPORT */
 async function exportBookingsCSV() {
   try {
     const all = await window.dbGetAllBookings();
-    if(all.length === 0) { alert('No data to export.'); return; }
+    if (all.length === 0) { alert('No data to export.'); return; }
 
-    let csv = 'Order ID,Name,Flat,Payment Method,Total (INR),Payment Status,UTR,Total Plates Booked,Total Plates Served,Booked Meals Summary,Created At\n';
+    let csv = 'Order ID,Name,Flat,Day,Meal,Type,Dine-In Qty,Parcel Qty,Total Booked,Total Served,Meal Service Status,Payment Method,Payment Status,UTR,Booking Date\n';
+
     all.forEach(b => {
       const created = new Date(b.createdAt).toLocaleString();
-      
-      let totalBookedPlates = 0;
-      let totalServedPlates = 0;
-      const mealDetails = (b.items || []).map(it => {
-        totalBookedPlates += (it.qty || 0);
-        totalServedPlates += (it.delivered || 0);
-        const typeStr = it.type ? ` [${it.type}]` : '';
+      const flat = b.flatNumber || '';
+      const payMethod = b.paymentMethod || '';
+      const payStatus = b.paymentStatus || '';
+      const utr = b.utr || '';
+
+      (b.items || []).forEach(it => {
         const parcelCount = it.parcelQty || 0;
         const dineInCount = (it.qty || 0) - parcelCount;
-        const pkgStr = parcelCount > 0 ? ` (DineIn:${dineInCount}, Parcel:${parcelCount})` : ` (DineIn:${it.qty})`;
-        return `${it.dayLabel} ${it.mealLabel}${typeStr} x${it.qty}${pkgStr} [Served:${it.delivered}/${it.qty}]`;
-      }).join(' ; ');
+        const typeStr = it.type ? (it.type === 'veg' ? 'Veg' : 'Non-veg') : 'Standard';
+        
+        let serviceStatus = 'Pending';
+        if (it.delivered >= it.qty) serviceStatus = 'Fully Served';
+        else if (it.delivered > 0) serviceStatus = 'Partially Served';
 
-      csv += `"${b.orderId}","${b.name}","${b.flatNumber||''}","${b.paymentMethod||''}",${b.total},"${b.paymentStatus}","${b.utr||''}",${totalBookedPlates},${totalServedPlates},"${mealDetails}","${created}"\n`;
+        const cleanMealLabel = (it.mealLabel || '').replace(/[\u2014\u2013â€”—]/g, '-');
+
+        csv += `"${b.orderId}","${b.name}","${flat}","${it.dayLabel}","${cleanMealLabel}","${typeStr}",${dineInCount},${parcelCount},${it.qty},${it.delivered},"${serviceStatus}","${payMethod}","${payStatus}","${utr}","${created}"\n`;
+      });
     });
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.setAttribute('href', url);
-    a.setAttribute('download', `durga_puja_bookings_${Date.now()}.csv`);
+    a.setAttribute('download', `durga_puja_master_report_${Date.now()}.csv`);
     a.click();
-  } catch(e) {
+  } catch (e) {
     console.error(e);
     alert('Failed to generate export.');
   }
 }
 
-/* ================= CAMERA QR SCANNER ================= */
+/* 2. SINGLE DAY CSV EXPORT */
+async function exportPerDayCSV() {
+  const dayId = document.getElementById('dayExportSelect').value;
+  const dayName = dayDef(dayId).label;
+
+  try {
+    const all = await window.dbGetAllBookings();
+    let csv = `Order ID,Name,Flat,Meal,Type,Dine-In Qty,Parcel Qty,Total Booked,Total Served,Payment Status\n`;
+    let count = 0;
+
+    all.forEach(b => {
+      (b.items || []).forEach(it => {
+        if (it.day === dayId) {
+          count++;
+          const parcelCount = it.parcelQty || 0;
+          const dineInCount = (it.qty || 0) - parcelCount;
+          const typeStr = it.type ? (it.type === 'veg' ? 'Veg' : 'Non-veg') : 'Standard';
+          const cleanMealLabel = (it.mealLabel || '').replace(/[\u2014\u2013â€”—]/g, '-');
+
+          csv += `"${b.orderId}","${b.name}","${b.flatNumber||''}","${cleanMealLabel}","${typeStr}",${dineInCount},${parcelCount},${it.qty},${it.delivered},"${b.paymentStatus||''}"\n`;
+        }
+      });
+    });
+
+    if (count === 0) { alert('No bookings found for ' + dayName); return; }
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `report_${dayName.toLowerCase()}_${Date.now()}.csv`);
+    a.click();
+  } catch(e) {
+    alert('Export failed.');
+  }
+}
+
+/* 3. KITCHEN PREP FORECAST SUMMARY REPORT FOR COOK */
+async function exportCookSummaryCSV() {
+  try {
+    const all = await window.dbGetAllBookings();
+    const summary = {};
+
+    all.forEach(b => {
+      // Only count verified or complimentary orders for kitchen cooking
+      if (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary') {
+        (b.items || []).forEach(it => {
+          const key = `${it.dayLabel} | ${it.mealLabel} | ${it.type ? (it.type==='veg'?'Veg':'Non-veg') : 'Standard'}`;
+          if (!summary[key]) {
+            summary[key] = { day: it.dayLabel, meal: it.mealLabel, type: it.type || 'Standard', dineIn: 0, parcel: 0, total: 0 };
+          }
+          const parcel = it.parcelQty || 0;
+          const dineIn = (it.qty || 0) - parcel;
+
+          summary[key].dineIn += dineIn;
+          summary[key].parcel += parcel;
+          summary[key].total += it.qty;
+        });
+      }
+    });
+
+    if (Object.keys(summary).length === 0) { alert('No verified bookings available for kitchen forecast.'); return; }
+
+    let csv = 'Puja Day,Meal Name,Type (Diet),Dine-In Plates (Counter),Parcel Takeaway Boxes,TOTAL PLATES TO COOK\n';
+    Object.values(summary).forEach(row => {
+      const cleanMealLabel = (row.meal || '').replace(/[\u2014\u2013â€”—]/g, '-');
+      csv += `"${row.day}","${cleanMealLabel}","${row.type === 'veg' ? 'Veg' : (row.type === 'nonveg' ? 'Non-veg' : 'Standard')}",${row.dineIn},${row.parcel},${row.total}\n`;
+    });
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.setAttribute('href', url);
+    a.setAttribute('download', `kitchen_cook_forecast_${Date.now()}.csv`);
+    a.click();
+  } catch(e) {
+    alert('Failed to generate cook summary.');
+  }
+}
+
+/* ================= CAMERA QR SCANNER (HMAC VERIFIED) ================= */
 async function toggleCamera(){
   if(camStream){ stopCamera(); return; }
   const box = document.getElementById('camBox');
@@ -1868,8 +2168,20 @@ function stopCamera(){
   if(btn) btn.textContent = 'Start Camera Scanner';
 }
 
-async function handleMealScan(orderId, day, meal){
+async function handleMealScan(orderId, day, meal, scannedHmac){
   const msg = document.getElementById('camMsg');
+  
+  // Validate HMAC offline signature
+  if(scannedHmac) {
+    const rawPayload = `${orderId}|${day}|${meal}`;
+    const expectedHmac = await generateHMACSignature(rawPayload);
+    // Ignore invalid / tampered QR signatures
+    if (scannedHmac.toLowerCase() !== expectedHmac.toLowerCase()) {
+      msg.innerHTML = '<div class="msg err">❌ Invalid or Tampered QR Code Signature!</div>';
+      return;
+    }
+  }
+
   const b = await fetchBooking(orderId);
   if(!b){ msg.innerHTML = '<div class="msg err">No booking found for this QR code.</div>'; return; }
 
@@ -1923,7 +2235,7 @@ function scanLoop(){
         stopCamera();
         window.scrollTo({top:0, behavior:'smooth'});
         if(payload.day && payload.meal){
-          handleMealScan(payload.orderId, payload.day, payload.meal);
+          handleMealScan(payload.orderId, payload.day, payload.meal, payload.hmac);
         } else {
           document.getElementById('serveLookupInput').value = payload.orderId;
           doLookupDirect('serveLookupInput');
