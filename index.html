@@ -1178,7 +1178,6 @@ function onAdminBlockChange() {
 
 function cartKey(day, meal){ return day + '_' + meal; }
 
-// Updated cart row structure to support independent Veg and Non-Veg quantities + parcels
 function getRow(day, meal){
   const k = cartKey(day, meal);
   if(!cart[k]) {
@@ -1204,16 +1203,21 @@ function effectiveInfo(dayId, mealId){
 
   let vegPrice = base.hasVariant ? base.variants.veg.price : base.price;
   let nonvegPrice = base.hasVariant ? base.variants.nonveg.price : base.price;
-  let items = base.hasVariant ? base.variants.veg.items : base.items;
+  
+  let vegItems = base.hasVariant ? base.variants.veg.items : base.items;
+  let nonvegItems = base.hasVariant ? base.variants.nonveg.items : base.items;
 
   let complimentary = false;
   if(ov){
     if(ov.complimentary){ vegPrice = 0; nonvegPrice = 0; complimentary = true; }
-    if(ov.items) items = ov.items;
+    if(ov.items) {
+      vegItems = ov.items;
+      nonvegItems = ov.items;
+    }
   }
 
   return {
-    vegPrice, nonvegPrice, items, complimentary, forced: !!forced,
+    vegPrice, nonvegPrice, vegItems, nonvegItems, complimentary, forced: !!forced,
     label: (ov && ov.label) ? ov.label : (base ? base.label : 'Meal'),
     hours: base ? (base.hours || '') : '',
     note: ov ? ov.note : null
@@ -1291,9 +1295,11 @@ function renderMealRows(){
     el.className = 'meal-row' + (info.complimentary ? ' free' : '');
 
     let variantsHtml = '';
+    let chipsHtml = '';
+
     if(!m.hasVariant || info.forced) {
-      // Single Variant (e.g. Breakfast or Forced Veg)
       let subTotal = row.vegQty * info.vegPrice + row.vegParcel * CONFIG.parcelCharge;
+      chipsHtml = info.vegItems.map(i=>`<span class="chip">${i}</span>`).join('');
       variantsHtml = `
         <div class="variant-row veg">
           <div class="variant-info">
@@ -1324,10 +1330,21 @@ function renderMealRows(){
         ` : ''}
       `;
     } else {
-      // Both Veg and Non-Veg variants available independently
       let vegSub = row.vegQty * info.vegPrice + row.vegParcel * CONFIG.parcelCharge;
       let nonvegSub = row.nonvegQty * info.nonvegPrice + row.nonvegParcel * CONFIG.parcelCharge;
       let totalMealSub = vegSub + nonvegSub;
+
+      // Render respective item chips based on what is active/selected, or show both cleanly
+      let activeChips = [];
+      if (row.vegQty > 0 && row.nonvegQty === 0) {
+        activeChips = info.vegItems;
+      } else if (row.nonvegQty > 0 && row.vegQty === 0) {
+        activeChips = info.nonvegItems;
+      } else {
+        // If both or neither selected, show both sections or default to veg
+        activeChips = [...new Set([...info.vegItems, ...info.nonvegItems])];
+      }
+      chipsHtml = activeChips.map(i=>`<span class="chip">${i}</span>`).join('');
 
       variantsHtml = `
         <!-- Veg Row -->
@@ -1397,7 +1414,7 @@ function renderMealRows(){
         </div>
       </div>
       ${variantsHtml}
-      <div class="chips" style="margin-top:10px;">${info.items.map(i=>`<span class="chip">${i}</span>`).join('')}</div>
+      <div class="chips" style="margin-top:10px;">${chipsHtml}</div>
       ${info.note ? `<div class="note good" style="margin-top:9px;">${info.note}</div>` : ''}
     `;
     wrap.appendChild(el);
