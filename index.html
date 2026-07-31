@@ -463,7 +463,8 @@
         </p>
       </div>
 
-      <div class="card">
+      <!-- Step 2: Choose Meals (Hidden by Default until Subscription Verification succeeds) -->
+      <div class="card" id="chooseMealsCard" style="display:none;">
         <p class="section-label"><span class="num">2</span>Choose your meals</p>
         <div class="day-pills" id="dayPills"></div>
         <div id="mealRows"></div>
@@ -844,6 +845,7 @@ function onBlockChange() {
   const flatSelect = document.getElementById('flatSelect');
   document.getElementById('subStatusMsg').innerHTML = '';
   isSubscriptionPaid = false;
+  document.getElementById('chooseMealsCard').style.display = 'none';
 
   if (block) {
     flatSelect.innerHTML = generateFlatOptions(block);
@@ -859,10 +861,12 @@ async function checkSubscriptionStatus() {
   const block = document.getElementById('blockSelect').value;
   const flat = document.getElementById('flatSelect').value;
   const msgEl = document.getElementById('subStatusMsg');
+  const mealsCard = document.getElementById('chooseMealsCard');
 
   if (!block || !flat) {
     msgEl.innerHTML = '';
     isSubscriptionPaid = false;
+    mealsCard.style.display = 'none';
     updateTotals();
     return;
   }
@@ -876,12 +880,15 @@ async function checkSubscriptionStatus() {
 
     if (paid) {
       msgEl.innerHTML = '<div class="msg ok" style="margin-top:6px; font-weight:600;">✓ Annual Festival Subscription Verified for Flat ' + fullFlatNumber + '</div>';
+      mealsCard.style.display = 'block'; // Show "Choose your meals" step when paid
     } else {
       msgEl.innerHTML = '<div class="msg err" style="margin-top:6px;">⚠️ <strong>Subscription Unpaid</strong>: Food coupon booking is restricted to flats that have cleared the Annual Festival Subscription.</div>';
+      mealsCard.style.display = 'none'; // Hide "Choose your meals" step when unpaid
     }
   } catch (e) {
     msgEl.innerHTML = '<div class="msg err" style="margin-top:6px;">Could not verify subscription status. Please try again.</div>';
     isSubscriptionPaid = false;
+    mealsCard.style.display = 'none';
   }
 
   updateTotals();
@@ -1465,6 +1472,7 @@ function startOver(existingName = '', existingFlat = '', existingPin = ''){
   } else {
     document.getElementById('subStatusMsg').innerHTML = '';
     isSubscriptionPaid = false;
+    document.getElementById('chooseMealsCard').style.display = 'none';
   }
   
   if(document.getElementById('utrInput')) document.getElementById('utrInput').value='';
