@@ -31,7 +31,7 @@
     font-size:16px;
     line-height:1.45;
     -webkit-tap-highlight-color:transparent;
-    padding-bottom:86px;
+    padding-bottom:24px;
   }
   h1,h2,h3,.display{font-family:'Baloo 2',cursive;}
   .hidden{display:none !important;}
@@ -262,17 +262,6 @@
 
   .row-subtotal{text-align:right;font-size:12.5px;color:#8a6a55;margin-top:6px;}
 
-  /* sticky total bar */
-  .sticky-bar{
-    position:fixed;left:0;right:0;bottom:0;
-    background:#fff;border-top:1.5px solid var(--line);
-    padding:10px 16px calc(10px + env(safe-area-inset-bottom));
-    display:flex;align-items:center;justify-content:space-between;gap:12px;
-    z-index:40;
-    box-shadow:0 -4px 16px rgba(43,15,15,0.08);
-  }
-  .sticky-bar .amt{font-family:'Baloo 2',cursive;font-weight:800;font-size:19px;color:var(--maroon);}
-  .sticky-bar .amt small{display:block;font-family:'Hind Siliguri';font-weight:500;font-size:11px;color:#8a6a55;}
   .btn{
     border:none;border-radius:12px;padding:12px 18px;
     font-family:'Hind Siliguri',sans-serif;font-weight:700;font-size:14.5px;
@@ -467,7 +456,7 @@
           <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;">Remember this PIN. It prevents others from accessing your flat's coupons.</div>
         </div>
 
-        <!-- Privacy Advisory moved to Step 1 -->
+        <!-- Privacy Advisory in Step 1 -->
         <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);">
           <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name, Flat Number, and PIN are stored securely to manage and verify your food coupons.
         </div>
@@ -692,11 +681,6 @@
 
 </main>
 
-<div class="sticky-bar" id="stickyBar">
-  <div class="amt">₹<span id="stickyTotal">0</span><small>Estimated total</small></div>
-  <button class="btn btn-primary" id="stickyBtn" onclick="goToStep(3)" disabled>Review &amp; Confirm</button>
-</div>
-
 <!-- ================= FIREBASE MODULE INITIALIZATION ================= -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -873,7 +857,6 @@ function goToStep(stepNumber) {
 
   const cardToScroll = stepNumber === 1 ? 'step1Card' : (stepNumber === 2 ? 'chooseMealsCard' : 'reviewCard');
   document.getElementById(cardToScroll).scrollIntoView({ behavior: 'smooth', block: 'start' });
-  refreshStickyVisibility();
 }
 
 function validateStep1() {
@@ -1046,14 +1029,7 @@ function switchTab(tab){
   document.getElementById('tabBookBtn').classList.toggle('active', tab==='book');
   document.getElementById('tabServeBtn').classList.toggle('active', tab==='serve');
   document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
-  refreshStickyVisibility();
   if(tab!=='serve') stopCamera();
-}
-
-function refreshStickyVisibility(){
-  const onBookTab = !document.getElementById('view-book').classList.contains('hidden');
-  const formShown = document.getElementById('bookForm').style.display !== 'none';
-  document.getElementById('stickyBar').classList.toggle('hidden', !(onBookTab && formShown && currentStep === 2));
 }
 
 /* ================= render day pills + meal rows ================= */
@@ -1174,13 +1150,8 @@ function itemCount(){
 }
 
 function updateTotals(){
-  const t = grandTotal();
-  const stickyBtn = document.getElementById('stickyBtn');
   const step2NextBtn = document.getElementById('btnNextToStep3');
-  document.getElementById('stickyTotal').textContent = t;
-  
   const canProceed = itemCount() > 0 && isSubscriptionPaid;
-  stickyBtn.disabled = !canProceed;
   step2NextBtn.disabled = !canProceed;
 }
 
@@ -1371,7 +1342,6 @@ async function confirmBooking(){
     renderTicket(booking);
     document.getElementById('bookForm').style.display = 'none';
     document.getElementById('ticketView').classList.remove('hidden');
-    refreshStickyVisibility();
     window.scrollTo({top:0, behavior:'smooth'});
 
     if(booking.paymentStatus === 'pending'){
@@ -1533,12 +1503,10 @@ function openMyCoupons(){
   document.getElementById('bookForm').style.display='none';
   document.getElementById('ticketView').classList.add('hidden');
   document.getElementById('myCouponsView').classList.remove('hidden');
-  document.getElementById('stickyBar').classList.add('hidden');
 }
 function backToBookForm(){
   document.getElementById('myCouponsView').classList.add('hidden');
   document.getElementById('bookForm').style.display='block';
-  refreshStickyVisibility();
 }
 async function searchMyCoupons(){
   const name = document.getElementById('searchName').value.trim();
