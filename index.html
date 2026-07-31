@@ -10,6 +10,8 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/jsqr@1.4.0/dist/jsQR.js';"></script>
 <!-- html2canvas for downloading ticket as PNG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- PapaParse for parsing CSV files in browser -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <style>
   :root{
@@ -166,6 +168,21 @@
     gap:10px;
     margin-top:16px;
   }
+
+  /* ---------- Drag & Drop File Upload Box ---------- */
+  .upload-box{
+    border:2px dashed var(--marigold);
+    border-radius:12px;
+    padding:16px;
+    text-align:center;
+    background:#FFFDF9;
+    cursor:pointer;
+    margin-top:10px;
+    transition:background .2s ease;
+  }
+  .upload-box:hover{ background:#FFF3E8; }
+  .upload-box input[type=file]{ display:none; }
+  .upload-label{ font-weight:600; font-size:13.5px; color:var(--maroon); cursor:pointer; }
 
   /* ---------- Layout ---------- */
   main{padding:16px 16px 8px;max-width:520px;margin:0 auto;}
@@ -701,6 +718,24 @@
     </div>
 
     <div id="committeePanel" class="hidden">
+      
+      <!-- ADMIN BULK CSV UPLOAD FOR SUBSCRIPTIONS -->
+      <div class="card">
+        <p class="section-label">📁 Admin Bulk Subscription Upload (CSV)</p>
+        <p style="font-size:13px; color:#6b4a3a; margin:0 0 10px;">Upload a society paid flats CSV to update all subscription statuses automatically in Firestore.</p>
+
+        <div class="upload-box" onclick="document.getElementById('csvFileInput').click()">
+          <div class="upload-label" id="uploadBoxLabel">📄 Click or Drag &amp; Drop `paid_flats.csv` file here</div>
+          <input type="file" id="csvFileInput" accept=".csv" onchange="handleCSVFileSelect(event)">
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn btn-primary" style="flex:1;" id="processCsvBtn" onclick="processAndUploadCSV()" disabled>Upload &amp; Update Firestore</button>
+          <button class="btn btn-outline" onclick="downloadSampleCSV()">📥 Download Sample CSV</button>
+        </div>
+        <div id="csvUploadMsg"></div>
+      </div>
+
       <!-- Real-time Committee Reports & Analytics -->
       <div class="card">
         <p class="section-label">📊 Committee Reports &amp; Analytics</p>
@@ -788,7 +823,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getFirestore, doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, onSnapshot
+    getFirestore, doc, setDoc, getDoc, deleteDoc, collection, query, where, getDocs, onSnapshot, writeBatch
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -836,6 +871,32 @@
       return data.status && data.status.toString().toLowerCase().trim() === 'paid';
     }
     return false;
+  };
+
+  /* ADMIN BULK CSV FIRESTORE BATCH UPLOADER */
+  window.dbBulkUploadSubscriptions = async function(subscriptionRows) {
+    let batch = writeBatch(db);
+    let count = 0;
+
+    for (const row of subscriptionRows) {
+      if (!row.flatId || !row.status) continue;
+      
+      const cleanFlatId = row.flatId.replace(/–|—/g, '-').trim();
+      const cleanStatus = row.status.toString().trim();
+
+      const docRef = doc(db, "puja_subscriptions", cleanFlatId);
+      batch.set(docRef, { status: cleanStatus, updatedAt: Date.now() }, { merge: true });
+      count++;
+
+      // Firestore Batch limit is 500 writes
+      if (count % 400 === 0) {
+        await batch.commit();
+        batch = writeBatch(db);
+      }
+    }
+
+    await batch.commit();
+    return count;
   };
 
   window.dbGetBookingsByNameAndFlatAndPin = async function(name, flat, pin) {
@@ -945,6 +1006,7 @@ let ticketUnsubscribe = null;
 let selectedPaymentMethod = null;
 let isSubscriptionPaid = false;
 let currentStep = 1;
+let selectedCsvFile = null;
 
 /* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR & VERIFIER */
 async function generateHMACSignature(dataStr) {
@@ -1139,7 +1201,6 @@ function effectiveInfo(dayId, mealId, chosenType){
 
   return {
     price, items, complimentary, type, forced: !!forced,
-    label: (ov && ov.label) || base.label,
     hours: base.hours || '',
     note: ov ? ov.note : null
   };
@@ -1733,7 +1794,7 @@ function renderMiniTicketInto(container, b){
   mountMealQrCodes(b);
 }
 
-/* ================= COMMITTEE ADMIN & SERVING ================= */
+/* ================= COMMITTEE ADMIN & BULK CSV UPLOAD ================= */
 function checkPin(){
   const v = document.getElementById('pinInput').value.trim();
   const msg = document.getElementById('pinMsg');
@@ -1745,6 +1806,63 @@ function checkPin(){
   }else{
     msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
   }
+}
+
+function handleCSVFileSelect(evt) {
+  const file = evt.target.files[0];
+  if(!file) return;
+  selectedCsvFile = file;
+  document.getElementById('uploadBoxLabel').textContent = `📄 Selected: ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById('processCsvBtn').disabled = false;
+}
+
+function downloadSampleCSV() {
+  const sample = "flatId,status\nA1-101,Paid\nA1-102,Unpaid\nA2-401,Paid\nB-1204,Paid\nC1-101,Paid\n";
+  const blob = new Blob([sample], { type: 'text/csv;charset=utf-8;' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "society_paid_flats_sample.csv";
+  a.click();
+}
+
+function processAndUploadCSV() {
+  if(!selectedCsvFile) { alert('Please select a CSV file first.'); return; }
+  const msg = document.getElementById('csvUploadMsg');
+  const btn = document.getElementById('processCsvBtn');
+  btn.disabled = true; btn.textContent = 'Processing…';
+  msg.innerHTML = '<div class="msg">Parsing CSV file…</div>';
+
+  Papa.parse(selectedCsvFile, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async function(results) {
+      if (results.errors && results.errors.length > 0) {
+        msg.innerHTML = '<div class="msg err">Error parsing CSV file. Check format and header row.</div>';
+        btn.disabled = false; btn.textContent = 'Upload & Update Firestore';
+        return;
+      }
+
+      const rows = results.data;
+      if (!rows || rows.length === 0) {
+        msg.innerHTML = '<div class="msg err">CSV file is empty.</div>';
+        btn.disabled = false; btn.textContent = 'Upload & Update Firestore';
+        return;
+      }
+
+      msg.innerHTML = `<div class="msg">Uploading ${rows.length} records to Firestore…</div>`;
+      try {
+        const totalUploaded = await window.dbBulkUploadSubscriptions(rows);
+        msg.innerHTML = `<div class="msg ok">✅ Successfully updated ${totalUploaded} flat subscription records in Firestore!</div>`;
+        btn.textContent = 'Completed ✓';
+        showToast(`✅ Updated ${totalUploaded} flat subscription records`, 'good');
+      } catch(e) {
+        console.error(e);
+        msg.innerHTML = '<div class="msg err">Failed to update Firestore database. Check permissions or network connection.</div>';
+        btn.disabled = false; btn.textContent = 'Retry Upload';
+      }
+    }
+  });
 }
 
 function checkServePin(){
