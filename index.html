@@ -251,8 +251,9 @@
     border:1.5px solid var(--line);
     border-radius:14px;
     padding:12px;
-    margin-bottom:10px;
+    margin-bottom:14px;
     position:relative;
+    background:#fff;
   }
   .meal-row.free{border-color:var(--green); background:#F6FBF6;}
   .free-ribbon{
@@ -261,46 +262,43 @@
     font-size:10.5px;font-weight:700;letter-spacing:.04em;
     padding:3px 9px;border-radius:999px;
   }
-  .meal-top{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .meal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;}
   .meal-name{font-family:'Baloo 2',cursive;font-weight:700;font-size:16px;color:var(--ink);}
   .meal-price{font-size:12.5px;color:#8a6a55;}
   .meal-price.free-text{color:var(--green);font-weight:700;}
+
+  /* Variant Sub-rows for Split Veg / Non-Veg */
+  .variant-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:#FFFDF9;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:8px 10px;
+    margin-top:8px;
+  }
+  .variant-info .vt{font-weight:700;font-size:13.5px;}
+  .variant-info .vp{font-size:11.5px;color:#8a6a55;}
+  .variant-row.veg .vt{color:var(--green);}
+  .variant-row.nonveg .vt{color:#B4501D;}
+
   .stepper{display:flex;align-items:center;gap:10px;}
   .stepper button{
-    width:32px;height:32px;border-radius:50%;
+    width:30px;height:30px;border-radius:50%;
     border:1.5px solid var(--maroon);
     background:#fff;color:var(--maroon);
-    font-size:18px;font-weight:700;line-height:1;
+    font-size:16px;font-weight:700;line-height:1;
     cursor:pointer;
   }
   .stepper button:disabled{opacity:.35;cursor:not-allowed;}
-  .stepper .qty{min-width:18px;text-align:center;font-weight:700;font-size:15px;}
-
-  .variant-picker{display:flex;gap:8px;margin-top:10px;}
-  .variant-btn{
-    flex:1;
-    border:1.5px solid var(--line);
-    background:#fff;
-    border-radius:10px;
-    padding:7px 8px;
-    text-align:center;
-    cursor:pointer;
-    font-size:12.5px;
-    font-weight:600;
-    color:#6b4a3a;
-  }
-  .variant-btn .vt{display:block;font-size:12.5px;}
-  .variant-btn .vp{display:block;font-size:11px;color:#8a6a55;font-weight:500;}
-  .variant-btn.active{border-color:var(--marigold);background:#FFF3E8;color:var(--maroon);}
-  .variant-btn.active .vp{color:var(--maroon);}
-  .variant-btn.nonveg .vt::before{content:"🔺 ";}
-  .variant-btn.veg .vt::before{content:"🟢 ";}
+  .stepper .qty{min-width:18px;text-align:center;font-weight:700;font-size:14.5px;}
 
   .veg-only-badge{
     display:inline-flex;align-items:center;gap:5px;
     font-size:11.5px;font-weight:700;color:var(--green);
     background:#E9F4E9;border-radius:999px;padding:3px 10px;
-    margin-top:8px;
+    margin-top:6px;
   }
 
   .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;}
@@ -311,15 +309,15 @@
 
   .parcel-row{
     display:flex;align-items:center;justify-content:space-between;
-    margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
-    font-size:13.5px;
+    margin-top:8px;padding-top:8px;border-top:1px dashed var(--line);
+    font-size:13px;
   }
   .parcel-label{display:flex;align-items:center;gap:6px;color:#6b4a3a;}
   .parcel-label input{width:16px;height:16px;}
   .mini-stepper{display:flex;align-items:center;gap:8px;}
   .mini-stepper button{
-    width:24px;height:24px;border-radius:50%;border:1.5px solid var(--marigold);
-    background:#fff;color:var(--marigold);font-weight:700;cursor:pointer;font-size:14px;line-height:1;
+    width:22px;height:22px;border-radius:50%;border:1.5px solid var(--marigold);
+    background:#fff;color:var(--marigold);font-weight:700;cursor:pointer;font-size:13px;line-height:1;
   }
   .mini-stepper button:disabled{opacity:.3;}
 
@@ -863,7 +861,6 @@
     await deleteDoc(ref);
   };
 
-  /* LIVE FIRESTORE LISTENER WITH TOAST NOTIFICATION */
   window.dbListenToBooking = function(orderId, callback) {
     const ref = doc(db, "bookings", orderId.toUpperCase().trim());
     let isInitial = true;
@@ -879,7 +876,6 @@
     });
   };
 
-  /* CASE-INSENSITIVE & DASH-FLEXIBLE ANNUAL FESTIVAL SUBSCRIPTION VERIFICATION CHECK */
   window.dbCheckSubscription = async function(fullFlatNumber) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const ref = doc(db, "puja_subscriptions", cleanFlatId);
@@ -891,7 +887,6 @@
     return false;
   };
 
-  /* ADMIN BULK CSV FIRESTORE BATCH UPLOADER */
   window.dbBulkUploadSubscriptions = async function(subscriptionRows) {
     let batch = writeBatch(db);
     let count = 0;
@@ -1182,11 +1177,19 @@ function onAdminBlockChange() {
 }
 
 function cartKey(day, meal){ return day + '_' + meal; }
+
+// Updated cart row structure to support independent Veg and Non-Veg quantities + parcels
 function getRow(day, meal){
   const k = cartKey(day, meal);
-  if(!cart[k]) cart[k] = { qty:0, parcelQty:0, type:'veg' };
+  if(!cart[k]) {
+    cart[k] = { 
+      vegQty: 0, vegParcel: 0, 
+      nonvegQty: 0, nonvegParcel: 0 
+    };
+  }
   return cart[k];
 }
+
 function mealBase(id){ return CONFIG.meals.find(m=>m.id===id); }
 function dayDef(id){ return CONFIG.days.find(d=>d.id===id); }
 function dayOverride(dayId, mealId){
@@ -1194,29 +1197,23 @@ function dayOverride(dayId, mealId){
   return (d.overrides && d.overrides[mealId]) || null;
 }
 
-function effectiveInfo(dayId, mealId, chosenType){
+function effectiveInfo(dayId, mealId){
   const base = mealBase(mealId);
   const ov = dayOverride(dayId, mealId);
   const forced = ov && ov.forceType;
-  const type = base.hasVariant ? (forced || chosenType || 'veg') : null;
 
-  let price, items;
-  if(base.hasVariant){
-    price = base.variants[type].price;
-    items = base.variants[type].items;
-  }else{
-    price = base.price;
-    items = base.items;
-  }
+  let vegPrice = base.hasVariant ? base.variants.veg.price : base.price;
+  let nonvegPrice = base.hasVariant ? base.variants.nonveg.price : base.price;
+  let items = base.hasVariant ? base.variants.veg.items : base.items;
 
   let complimentary = false;
   if(ov){
-    if(ov.complimentary){ price = 0; complimentary = true; }
+    if(ov.complimentary){ vegPrice = 0; nonvegPrice = 0; complimentary = true; }
     if(ov.items) items = ov.items;
   }
 
   return {
-    price, items, complimentary, type, forced: !!forced,
+    vegPrice, nonvegPrice, items, complimentary, forced: !!forced,
     label: (ov && ov.label) ? ov.label : (base ? base.label : 'Meal'),
     hours: base ? (base.hours || '') : '',
     note: ov ? ov.note : null
@@ -1270,7 +1267,10 @@ function renderDayPills(){
   const wrap = document.getElementById('dayPills');
   wrap.innerHTML = '';
   CONFIG.days.forEach(d=>{
-    const has = CONFIG.meals.some(m=> getRow(d.id,m.id).qty > 0);
+    const has = CONFIG.meals.some(m=>{
+      const r = getRow(d.id, m.id);
+      return (r.vegQty > 0 || r.nonvegQty > 0);
+    });
     const hasFree = d.overrides && Object.values(d.overrides).some(o=>o.complimentary);
     const el = document.createElement('div');
     el.className = 'day-pill' + (d.id===activeDay?' active':'') + (has?' has-items':'');
@@ -1285,25 +1285,107 @@ function renderMealRows(){
   wrap.innerHTML = '';
   CONFIG.meals.forEach(m=>{
     const row = getRow(activeDay, m.id);
-    const info = effectiveInfo(activeDay, m.id, row.type);
-    if(m.hasVariant) row.type = info.type;
+    const info = effectiveInfo(activeDay, m.id);
 
     const el = document.createElement('div');
     el.className = 'meal-row' + (info.complimentary ? ' free' : '');
 
-    let variantHtml = '';
-    if(m.hasVariant && !info.forced){
-      variantHtml = `
-        <div class="variant-picker">
-          <div class="variant-btn veg ${row.type==='veg'?'active':''}" onclick="setMealType('${activeDay}','${m.id}','veg')">
-            <span class="vt">Veg</span><span class="vp">₹${m.variants.veg.price}</span>
+    let variantsHtml = '';
+    if(!m.hasVariant || info.forced) {
+      // Single Variant (e.g. Breakfast or Forced Veg)
+      let subTotal = row.vegQty * info.vegPrice + row.vegParcel * CONFIG.parcelCharge;
+      variantsHtml = `
+        <div class="variant-row veg">
+          <div class="variant-info">
+            <span class="vt">${info.label}</span>
+            <span class="vp">₹${info.vegPrice} / plate</span>
           </div>
-          <div class="variant-btn nonveg ${row.type==='nonveg'?'active':''}" onclick="setMealType('${activeDay}','${m.id}','nonveg')">
-            <span class="vt">Non-veg</span><span class="vp">₹${m.variants.nonveg.price}</span>
+          <div class="stepper">
+            <button ${row.vegQty<=0?'disabled':''} onclick="changeVariantQty('${activeDay}','${m.id}','veg',-1)">−</button>
+            <div class="qty">${row.vegQty}</div>
+            <button onclick="changeVariantQty('${activeDay}','${m.id}','veg',1)">+</button>
           </div>
-        </div>`;
-    } else if(m.hasVariant && info.forced){
-      variantHtml = `<div class="veg-only-badge">🟢 Vegetarian only</div>`;
+        </div>
+        ${info.forced ? '<div class="veg-only-badge">🟢 Vegetarian only</div>' : ''}
+        ${row.vegQty > 0 ? `
+          <div class="parcel-row">
+            <label class="parcel-label">
+              <input type="checkbox" ${row.vegParcel>0?'checked':''} onchange="toggleVariantParcel('${activeDay}','${m.id}','veg', this.checked)">
+              Parcel / takeaway box (+₹${CONFIG.parcelCharge} each)
+            </label>
+            ${row.vegParcel > 0 ? `
+              <div class="mini-stepper">
+                <button ${row.vegParcel<=0?'disabled':''} onclick="changeVariantParcelQty('${activeDay}','${m.id}','veg',-1)">−</button>
+                <span>${row.vegParcel}</span>
+                <button ${row.vegParcel>=row.vegQty?'disabled':''} onclick="changeVariantParcelQty('${activeDay}','${m.id}','veg',1)">+</button>
+              </div>` : ''}
+          </div>
+          <div class="row-subtotal">Subtotal: ${info.complimentary && row.vegParcel===0 ? '<span class="free">FREE</span>' : '₹'+subTotal}</div>
+        ` : ''}
+      `;
+    } else {
+      // Both Veg and Non-Veg variants available independently
+      let vegSub = row.vegQty * info.vegPrice + row.vegParcel * CONFIG.parcelCharge;
+      let nonvegSub = row.nonvegQty * info.nonvegPrice + row.nonvegParcel * CONFIG.parcelCharge;
+      let totalMealSub = vegSub + nonvegSub;
+
+      variantsHtml = `
+        <!-- Veg Row -->
+        <div class="variant-row veg">
+          <div class="variant-info">
+            <span class="vt">🟢 Veg Option</span>
+            <span class="vp">₹${info.vegPrice} / plate</span>
+          </div>
+          <div class="stepper">
+            <button ${row.vegQty<=0?'disabled':''} onclick="changeVariantQty('${activeDay}','${m.id}','veg',-1)">−</button>
+            <div class="qty">${row.vegQty}</div>
+            <button onclick="changeVariantQty('${activeDay}','${m.id}','veg',1)">+</button>
+          </div>
+        </div>
+        ${row.vegQty > 0 ? `
+          <div class="parcel-row">
+            <label class="parcel-label">
+              <input type="checkbox" ${row.vegParcel>0?'checked':''} onchange="toggleVariantParcel('${activeDay}','${m.id}','veg', this.checked)">
+              Veg Parcel box (+₹${CONFIG.parcelCharge})
+            </label>
+            ${row.vegParcel > 0 ? `
+              <div class="mini-stepper">
+                <button ${row.vegParcel<=0?'disabled':''} onclick="changeVariantParcelQty('${activeDay}','${m.id}','veg',-1)">−</button>
+                <span>${row.vegParcel}</span>
+                <button ${row.vegParcel>=row.vegQty?'disabled':''} onclick="changeVariantParcelQty('${activeDay}','${m.id}','veg',1)">+</button>
+              </div>` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Non-Veg Row -->
+        <div class="variant-row nonveg" style="margin-top:6px;">
+          <div class="variant-info">
+            <span class="vt">🔺 Non-Veg Option</span>
+            <span class="vp">₹${info.nonvegPrice} / plate</span>
+          </div>
+          <div class="stepper">
+            <button ${row.nonvegQty<=0?'disabled':''} onclick="changeVariantQty('${activeDay}','${m.id}','nonveg',-1)">−</button>
+            <div class="qty">${row.nonvegQty}</div>
+            <button onclick="changeVariantQty('${activeDay}','${m.id}','nonveg',1)">+</button>
+          </div>
+        </div>
+        ${row.nonvegQty > 0 ? `
+          <div class="parcel-row">
+            <label class="parcel-label">
+              <input type="checkbox" ${row.nonvegParcel>0?'checked':''} onchange="toggleVariantParcel('${activeDay}','${m.id}','nonveg', this.checked)">
+              Non-Veg Parcel box (+₹${CONFIG.parcelCharge})
+            </label>
+            ${row.nonvegParcel > 0 ? `
+              <div class="mini-stepper">
+                <button ${row.nonvegParcel<=0?'disabled':''} onclick="changeVariantParcelQty('${activeDay}','${m.id}','nonveg',-1)">−</button>
+                <span>${row.nonvegParcel}</span>
+                <button ${row.nonvegParcel>=row.nonvegQty?'disabled':''} onclick="changeVariantParcelQty('${activeDay}','${m.id}','nonveg',1)">+</button>
+              </div>` : ''}
+          </div>
+        ` : ''}
+
+        ${(row.vegQty > 0 || row.nonvegQty > 0) ? `<div class="row-subtotal">Subtotal: ₹${totalMealSub}</div>` : ''}
+      `;
     }
 
     el.innerHTML = `
@@ -1311,64 +1393,53 @@ function renderMealRows(){
       <div class="meal-top">
         <div>
           <div class="meal-name">${info.label}</div>
-          <div class="meal-price ${info.complimentary?'free-text':''}">${info.complimentary ? 'No charge — offered by the committee' : '₹'+info.price+' / plate'}</div>
           ${info.hours ? `<div class="timing-badge">⏰ Counter Hours: ${info.hours}</div>` : ''}
         </div>
-        <div class="stepper">
-          <button ${row.qty<=0?'disabled':''} onclick="changeQty('${activeDay}','${m.id}',-1)">−</button>
-          <div class="qty">${row.qty}</div>
-          <button onclick="changeQty('${activeDay}','${m.id}',1)">+</button>
-        </div>
       </div>
-      ${variantHtml}
-      <div class="chips">${info.items.map(i=>`<span class="chip">${i}</span>`).join('')}</div>
+      ${variantsHtml}
+      <div class="chips" style="margin-top:10px;">${info.items.map(i=>`<span class="chip">${i}</span>`).join('')}</div>
       ${info.note ? `<div class="note good" style="margin-top:9px;">${info.note}</div>` : ''}
-      ${row.qty>0 ? `
-      <div class="parcel-row">
-        <label class="parcel-label">
-          <input type="checkbox" ${row.parcelQty>0?'checked':''} onchange="toggleParcel('${activeDay}','${m.id}', this.checked)">
-          Need parcel / takeaway box (+₹${CONFIG.parcelCharge} each)
-        </label>
-        ${row.parcelQty>0 ? `
-        <div class="mini-stepper">
-          <button ${row.parcelQty<=0?'disabled':''} onclick="changeParcel('${activeDay}','${m.id}',-1)">−</button>
-          <span>${row.parcelQty}</span>
-          <button ${row.parcelQty>=row.qty?'disabled':''} onclick="changeParcel('${activeDay}','${m.id}',1)">+</button>
-        </div>` : ''}
-      </div>` : ''}
-      ${row.qty>0 ? `<div class="row-subtotal">Subtotal: ${info.complimentary && row.parcelQty===0 ? '<span class="free">FREE</span>' : '₹'+rowTotal(activeDay,m.id,row)}</div>` : ''}
     `;
     wrap.appendChild(el);
   });
 }
 
-function setMealType(day, meal, type){
-  const row = getRow(day, meal);
-  row.type = type;
+function changeVariantQty(day, mealId, variant, delta){
+  const row = getRow(day, mealId);
+  if(variant === 'veg'){
+    row.vegQty = Math.max(0, Math.min(9, row.vegQty + delta));
+    if(row.vegParcel > row.vegQty) row.vegParcel = row.vegQty;
+  } else {
+    row.nonvegQty = Math.max(0, Math.min(9, row.nonvegQty + delta));
+    if(row.nonvegParcel > row.nonvegQty) row.nonvegParcel = row.nonvegQty;
+  }
+  renderDayPills(); renderMealRows(); updateTotals();
+}
+
+function toggleVariantParcel(day, mealId, variant, checked){
+  const row = getRow(day, mealId);
+  if(variant === 'veg'){
+    row.vegParcel = checked ? row.vegQty : 0;
+  } else {
+    row.nonvegParcel = checked ? row.nonvegQty : 0;
+  }
+  renderMealRows(); updateTotals();
+}
+
+function changeVariantParcelQty(day, mealId, variant, delta){
+  const row = getRow(day, mealId);
+  if(variant === 'veg'){
+    row.vegParcel = Math.max(0, Math.min(row.vegQty, row.vegParcel + delta));
+  } else {
+    row.nonvegParcel = Math.max(0, Math.min(row.nonvegQty, row.nonvegParcel + delta));
+  }
   renderMealRows(); updateTotals();
 }
 
 function rowTotal(day, mealId, row){
-  const info = effectiveInfo(day, mealId, row.type);
-  return row.qty*info.price + row.parcelQty*CONFIG.parcelCharge;
-}
-
-function changeQty(day, meal, delta){
-  const row = getRow(day, meal);
-  row.qty = Math.max(0, Math.min(9, row.qty+delta));
-  if(row.parcelQty > row.qty) row.parcelQty = row.qty;
-  if(row.qty===0) row.parcelQty = 0;
-  renderDayPills(); renderMealRows(); updateTotals();
-}
-function toggleParcel(day, meal, checked){
-  const row = getRow(day, meal);
-  row.parcelQty = checked ? row.qty : 0;
-  renderMealRows(); updateTotals();
-}
-function changeParcel(day, meal, delta){
-  const row = getRow(day, meal);
-  row.parcelQty = Math.max(0, Math.min(row.qty, row.parcelQty+delta));
-  renderMealRows(); updateTotals();
+  const info = effectiveInfo(day, mealId);
+  return (row.vegQty * info.vegPrice) + (row.vegParcel * CONFIG.parcelCharge) +
+         (row.nonvegQty * info.nonvegPrice) + (row.nonvegParcel * CONFIG.parcelCharge);
 }
 
 function grandTotal(){
@@ -1379,8 +1450,13 @@ function grandTotal(){
   });
   return t;
 }
+
 function itemCount(){
-  return Object.values(cart).reduce((s,r)=>s+r.qty,0);
+  let count = 0;
+  Object.values(cart).forEach(r => {
+    count += (r.vegQty || 0) + (r.nonvegQty || 0);
+  });
+  return count;
 }
 
 function updateTotals(){
@@ -1456,19 +1532,30 @@ function prepareReviewStep(){
   const name = document.getElementById('userName').value.trim();
   const summary = document.getElementById('summaryRows');
   summary.innerHTML = '';
+  
   Object.keys(cart).forEach(k=>{
     const row = cart[k];
-    if(row.qty<=0) return;
     const [day, meal] = k.split('_');
     const d = dayDef(day);
-    const info = effectiveInfo(day, meal, row.type);
-    const total = rowTotal(day, meal, row);
-    const typeTag = info.type ? (info.type==='veg' ? ' (Veg)' : ' (Non-veg)') : '';
-    const div = document.createElement('div');
-    div.className = 'summary-row';
-    div.innerHTML = `<span>${d.label} · ${info.label}${typeTag} × ${row.qty}${row.parcelQty>0?` (+${row.parcelQty} parcel)`:''}</span><span class="${total===0?'free':''}">${total===0?'FREE':'₹'+total}</span>`;
-    summary.appendChild(div);
+    const info = effectiveInfo(day, meal);
+
+    if(row.vegQty > 0) {
+      let sub = (row.vegQty * info.vegPrice) + (row.vegParcel * CONFIG.parcelCharge);
+      const div = document.createElement('div');
+      div.className = 'summary-row';
+      div.innerHTML = `<span>${d.label} · ${info.label} (Veg) × ${row.vegQty}${row.vegParcel>0?` (+${row.vegParcel} parcel)`:''}</span><span class="${sub===0?'free':''}">${sub===0?'FREE':'₹'+sub}</span>`;
+      summary.appendChild(div);
+    }
+
+    if(row.nonvegQty > 0) {
+      let sub = (row.nonvegQty * info.nonvegPrice) + (row.nonvegParcel * CONFIG.parcelCharge);
+      const div = document.createElement('div');
+      div.className = 'summary-row';
+      div.innerHTML = `<span>${d.label} · ${info.label} (Non-veg) × ${row.nonvegQty}${row.nonvegParcel>0?` (+${row.nonvegParcel} parcel)`:''}</span><span>₹${sub}</span>`;
+      summary.appendChild(div);
+    }
   });
+
   const total = grandTotal();
   document.getElementById('grandTotalLbl').textContent = '₹'+total;
   document.getElementById('paidAmountLbl').textContent = total;
@@ -1539,18 +1626,32 @@ async function confirmBooking(){
   const items = [];
   Object.keys(cart).forEach(k=>{
     const row = cart[k];
-    if(row.qty<=0) return;
     const [day, meal] = k.split('_');
-    const info = effectiveInfo(day, meal, row.type);
-    items.push({
-      day, dayLabel: dayDef(day).label,
-      meal, mealLabel: info.label,
-      type: info.type,
-      complimentary: info.complimentary,
-      unitPrice: info.price,
-      qty: row.qty, parcelQty: row.parcelQty,
-      delivered: 0
-    });
+    const info = effectiveInfo(day, meal);
+
+    if(row.vegQty > 0) {
+      items.push({
+        day, dayLabel: dayDef(day).label,
+        meal, mealLabel: info.label,
+        type: 'veg',
+        complimentary: info.complimentary,
+        unitPrice: info.vegPrice,
+        qty: row.vegQty, parcelQty: row.vegParcel,
+        delivered: 0
+      });
+    }
+
+    if(row.nonvegQty > 0) {
+      items.push({
+        day, dayLabel: dayDef(day).label,
+        meal, mealLabel: info.label,
+        type: 'nonveg',
+        complimentary: false,
+        unitPrice: info.nonvegPrice,
+        qty: row.nonvegQty, parcelQty: row.nonvegParcel,
+        delivered: 0
+      });
+    }
   });
 
   const orderId = genOrderId();
@@ -1605,7 +1706,7 @@ function paymentMethodLabel(b){
 }
 
 async function mealQrPayloadHMAC(b, it){
-  const rawPayload = `${b.orderId}|${it.day}|${it.meal}|${b.name}`;
+  const rawPayload = `${b.orderId}|${it.day}|${it.meal}|${it.type}|${b.name}`;
   const hmac = await generateHMACSignature(rawPayload);
   return `${rawPayload}|${hmac}`;
 }
@@ -1635,7 +1736,7 @@ function renderBookingMealsHtml(b){
         packagingTags = `<span class="tag dinein">🍽️ Dine-in</span>`;
       }
 
-      const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
+      const qid = `qr_${b.orderId}_${it.day}_${it.meal}_${it.type}`;
       html += `
         <div class="meal-qr-card">
           <div class="meal-qr-head">
@@ -1658,7 +1759,7 @@ function mountMealQrCodes(b){
   requestAnimationFrame(() => {
     setTimeout(() => {
       b.items.forEach(async (it) => {
-        const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
+        const qid = `qr_${b.orderId}_${it.day}_${it.meal}_${it.type}`;
         const el = document.getElementById(qid);
         if(el && el.children.length === 0){
           el.innerHTML = '';
@@ -1690,7 +1791,7 @@ function renderTicket(b){
         </div>
       </div>
     </div>
-    <div class="note">Each meal has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
+    <div class="note">Each meal variant has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
     <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
     <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">Book More Coupons</button>
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
@@ -1908,10 +2009,10 @@ async function saveBooking(b){
 
 function parseQrPayload(raw){
   const parts = String(raw).split('|');
-  if(parts.length>=3){
-    return { orderId: parts[0], day: parts[1], meal: parts[2], name: parts[3] || null, hmac: parts[4] || null };
+  if(parts.length>=4){
+    return { orderId: parts[0], day: parts[1], meal: parts[2], type: parts[3], name: parts[4] || null, hmac: parts[5] || null };
   }
-  return { orderId: raw, day:null, meal:null, name:null, hmac:null };
+  return { orderId: raw, day:null, meal:null, type:null, name:null, hmac:null };
 }
 
 function doLookupDirect(inputId) {
@@ -2305,11 +2406,11 @@ function stopCamera(){
   if(btn) btn.textContent = 'Start Camera Scanner';
 }
 
-async function handleMealScan(orderId, day, meal, scannedHmac){
+async function handleMealScan(orderId, day, meal, type, scannedHmac){
   const msg = document.getElementById('camMsg');
   
   if(scannedHmac) {
-    const rawPayload = `${orderId}|${day}|${meal}`;
+    const rawPayload = `${orderId}|${day}|${meal}|${type}`;
     const expectedHmac = await generateHMACSignature(rawPayload);
     if (scannedHmac.toLowerCase() !== expectedHmac.toLowerCase()) {
       msg.innerHTML = '<div class="msg err">❌ Invalid or Tampered QR Code Signature!</div>';
@@ -2320,8 +2421,8 @@ async function handleMealScan(orderId, day, meal, scannedHmac){
   const b = await fetchBooking(orderId);
   if(!b){ msg.innerHTML = '<div class="msg err">No booking found for this QR code.</div>'; return; }
 
-  const idx = b.items.findIndex(it=>it.day===day && it.meal===meal);
-  if(idx===-1){ msg.innerHTML = '<div class="msg err">This QR does not match any item in this booking.</div>'; return; }
+  const idx = b.items.findIndex(it=>it.day===day && it.meal===meal && it.type===type);
+  if(idx===-1){ msg.innerHTML = '<div class="msg err">This QR variant does not match any item in this booking.</div>'; return; }
   const it = b.items[idx];
 
   if(b.paymentStatus === 'pending'){
@@ -2331,7 +2432,7 @@ async function handleMealScan(orderId, day, meal, scannedHmac){
     return;
   }
   if(it.delivered >= it.qty){
-    msg.innerHTML = `<div class="msg err">⚠️ Already fully served: ${escapeHtml(b.name)} — ${it.dayLabel} ${it.mealLabel} (${it.delivered}/${it.qty} served).</div>`;
+    msg.innerHTML = `<div class="msg err">⚠️ Already fully served: ${escapeHtml(b.name)} — ${it.dayLabel} ${it.mealLabel} (${it.type}) (${it.delivered}/${it.qty} served).</div>`;
     document.getElementById('serveLookupInput').value = orderId;
     doLookupDirect('serveLookupInput');
     return;
@@ -2345,7 +2446,7 @@ async function handleMealScan(orderId, day, meal, scannedHmac){
   const dineInCount = (it.qty || 0) - parcelCount;
   const pkgLabel = parcelCount > 0 ? ` (Parcel: ${parcelCount})` : ' (Dine-in)';
 
-  msg.innerHTML = `<div class="msg ok">✅ Served 1 Plate to ${escapeHtml(b.name)}${b.flatNumber?' (Flat '+escapeHtml(b.flatNumber)+')':''} — ${it.dayLabel} ${it.mealLabel} ${typeTxt}${pkgLabel} [${it.delivered}/${it.qty}]</div>`;
+  msg.innerHTML = `<div class="msg ok">✅ Served 1 Plate to ${escapeHtml(b.name)}${b.flatNumber?' (Flat '+escapeHtml(b.flatNumber)+')':''} — ${it.dayLabel} ${it.mealLabel} (${typeTxt})${pkgLabel} [${it.delivered}/${it.qty}]</div>`;
   document.getElementById('serveLookupInput').value = orderId;
   doLookupDirect('serveLookupInput');
   generateReports();
@@ -2369,8 +2470,8 @@ function scanLoop(){
         const payload = parseQrPayload(code.data);
         stopCamera();
         window.scrollTo({top:0, behavior:'smooth'});
-        if(payload.day && payload.meal){
-          handleMealScan(payload.orderId, payload.day, payload.meal, payload.hmac);
+        if(payload.day && payload.meal && payload.type){
+          handleMealScan(payload.orderId, payload.day, payload.meal, payload.type, payload.hmac);
         } else {
           document.getElementById('serveLookupInput').value = payload.orderId;
           doLookupDirect('serveLookupInput');
