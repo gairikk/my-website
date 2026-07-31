@@ -60,20 +60,33 @@
       radial-gradient(circle at 90% 0%, rgba(232,121,45,0.30), transparent 45%),
       linear-gradient(160deg, var(--maroon) 0%, var(--maroon-dark) 100%);
     color:var(--ivory);
-    padding:22px 16px 26px;
+    padding:18px 16px 22px;
     position:relative;
     overflow:hidden;
   }
+  .hero-top-bar{
+    display:flex; justify-content:space-between; align-items:center;
+  }
   .hero-eyebrow{
-    font-size:12.5px;
-    letter-spacing:.14em;
+    font-size:12px;
+    letter-spacing:.12em;
     text-transform:uppercase;
     color:var(--gold-soft);
     font-weight:600;
   }
+  .lang-toggle-btn{
+    background:rgba(251,243,228,0.18);
+    border:1px solid var(--gold-soft);
+    color:var(--ivory);
+    border-radius:999px;
+    padding:3px 10px;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+  }
   .hero h1{
-    margin:4px 0 6px;
-    font-size:28px;
+    margin:4px 0 4px;
+    font-size:26px;
     font-weight:800;
     color:#fff;
     display:flex;
@@ -83,31 +96,31 @@
   .hero p.sub{
     margin:0;
     color:rgba(251,243,228,0.85);
-    font-size:14px;
-    max-width:34ch;
+    font-size:13.5px;
+    max-width:36ch;
   }
   .garland{
     display:flex;
-    margin-top:16px;
-    height:22px;
+    margin-top:12px;
+    height:18px;
   }
   .garland svg{display:block;width:100%;height:100%;}
 
   .tabs{
     display:flex;
     gap:4px;
-    margin-top:16px;
+    margin-top:14px;
   }
   .tab-btn{
     flex:1;
     border:1px solid rgba(251,243,228,0.35);
     background:rgba(251,243,228,0.08);
     color:var(--ivory);
-    padding:8px 4px;
+    padding:8px 2px;
     border-radius:999px;
     font-family:'Hind Siliguri',sans-serif;
     font-weight:600;
-    font-size:12.5px;
+    font-size:12px;
     cursor:pointer;
     text-align:center;
     white-space:nowrap;
@@ -228,6 +241,45 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /* ---------- Kitchen Display Live Cards ---------- */
+  .kitchen-card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .kitchen-card {
+    background: #FFFDF9;
+    border: 1.5px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .kitchen-card-title {
+    font-family: 'Baloo 2', cursive;
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--maroon);
+    border-bottom: 1px dashed var(--line);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  .kitchen-counts-row {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+  }
+  .k-val {
+    font-family: 'Baloo 2', cursive;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--maroon-dark);
+  }
+  .k-lbl {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #8a6a55;
   }
 
   /* ---------- Drag & Drop File Upload Box ---------- */
@@ -392,6 +444,7 @@
   .btn-primary{background:var(--marigold);color:#fff;}
   .btn-primary:disabled{background:#d9c8b8;color:#fff;cursor:not-allowed;}
   .btn-outline{background:#fff;border:1.5px solid var(--maroon);color:var(--maroon);}
+  .btn-whatsapp{background:#25D366;color:#fff;}
   .btn-danger{background:#fff;border:1.5px solid #8a1f1f;color:#8a1f1f;}
   .btn-block{width:100%;}
   .btn-ghost{background:transparent;border:none;color:var(--maroon);font-weight:700;text-decoration:underline;padding:6px;}
@@ -521,9 +574,12 @@
 <body>
 
 <div class="hero">
-  <div class="hero-eyebrow">Bhog Bela · Food Coupon Booking</div>
-  <h1>🪔 Shubho Durga Puja</h1>
-  <p class="sub">Book breakfast, lunch &amp; dinner coupons for all four days of the pujo — choose veg or non-veg, pay by cash or UPI, get a QR coupon per meal.</p>
+  <div class="hero-top-bar">
+    <div class="hero-eyebrow" id="eyebrowText">Bhog Bela · Food Coupon Booking</div>
+    <button class="lang-toggle-btn" onclick="toggleLanguage()" id="langBtn">বাংলা</button>
+  </div>
+  <h1 id="heroTitle">🪔 Shubho Durga Puja</h1>
+  <p class="sub" id="heroSub">Book breakfast, lunch &amp; dinner coupons for all four days of the pujo — choose veg or non-veg, pay by cash or UPI, get a QR coupon per meal.</p>
   <div class="garland">
     <svg viewBox="0 0 400 20" preserveAspectRatio="none">
       <path d="M0,4 Q10,20 20,4 Q30,20 40,4 Q50,20 60,4 Q70,20 80,4 Q90,20 100,4 Q110,20 120,4 Q130,20 140,4 Q150,20 160,4 Q170,20 180,4 Q190,20 200,4 Q210,20 220,4 Q230,20 240,4 Q250,20 260,4 Q270,20 280,4 Q290,20 300,4 Q310,20 320,4 Q330,20 340,4 Q350,20 360,4 Q370,20 380,4 Q390,20 400,4" fill="none" stroke="#E8792D" stroke-width="1.5" opacity="0.6"/>
@@ -537,7 +593,8 @@
   <div class="tabs">
     <button class="tab-btn active" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book</button>
     <button class="tab-btn" id="tabServeBtn" onclick="switchTab('serve')">🍽️ Food Counter</button>
-    <button class="tab-btn" id="tabCommitteeBtn" onclick="switchTab('committee')">🧾 Committee Admin</button>
+    <button class="tab-btn" id="tabKitchenBtn" onclick="switchTab('kitchen')">👨‍🍳 Kitchen Display</button>
+    <button class="tab-btn" id="tabCommitteeBtn" onclick="switchTab('committee')">🧾 Admin</button>
   </div>
 </div>
 
@@ -550,31 +607,31 @@
       
       <!-- STEPPER PROGRESS BAR -->
       <div class="stepper-bar">
-        <div class="step-item active" id="step1Indicator"><span class="step-num">1</span> Details</div>
+        <div class="step-item active" id="step1Indicator"><span class="step-num">1</span> <span class="step-lbl-1">Details</span></div>
         <div class="step-line"></div>
-        <div class="step-item" id="step2Indicator"><span class="step-num">2</span> Meals</div>
+        <div class="step-item" id="step2Indicator"><span class="step-num">2</span> <span class="step-lbl-2">Meals</span></div>
         <div class="step-line"></div>
-        <div class="step-item" id="step3Indicator"><span class="step-num">3</span> Review</div>
+        <div class="step-item" id="step3Indicator"><span class="step-num">3</span> <span class="step-lbl-3">Review</span></div>
       </div>
 
       <!-- STEP 1: Details Card -->
       <div class="card" id="step1Card">
-        <p class="section-label"><span class="num">1</span>Your details</p>
+        <p class="section-label"><span class="num">1</span><span id="lblStep1Title">Your details</span></p>
 
         <!-- BOOKING CUT-OFF ADVISORY DISCLAIMER -->
-        <div class="note alert" style="margin-top:0; margin-bottom:14px; background:#FFF3E8; border-color:var(--marigold);">
+        <div class="note alert" style="margin-top:0; margin-bottom:14px; background:#FFF3E8; border-color:var(--marigold);" id="cutoffNote">
           ⏳ <strong>Booking Cut-Off Notice:</strong> Online food coupon bookings close on <strong>October 15th at 11:59 PM</strong>. No further additions, changes, or late requests will be entertained after the cut-off date to assist kitchen preparations.
         </div>
 
         <div class="field">
-          <label for="userName">Full name</label>
+          <label for="userName" id="lblFullName">Full name</label>
           <input type="text" id="userName" placeholder="e.g. Ritwik Sen" autocomplete="name">
         </div>
         
         <!-- Cascading Flat Dropdown Selector -->
         <div class="row2">
           <div class="field">
-            <label for="blockSelect">Select Block</label>
+            <label for="blockSelect" id="lblSelectBlock">Select Block</label>
             <select id="blockSelect" onchange="onBlockChange()">
               <option value="">-- Choose Block --</option>
               <option value="A1">Block A1</option>
@@ -586,7 +643,7 @@
             </select>
           </div>
           <div class="field">
-            <label for="flatSelect">Select Flat Number</label>
+            <label for="flatSelect" id="lblSelectFlat">Select Flat Number</label>
             <select id="flatSelect" disabled onchange="checkSubscriptionStatus()">
               <option value="">-- Select Block First --</option>
             </select>
@@ -597,19 +654,19 @@
         <div id="subStatusMsg"></div>
 
         <div class="field" style="margin-top:12px;">
-          <label for="userPin">Set 4-Digit Security PIN (to lock &amp; access your coupons)</label>
+          <label for="userPin" id="lblSetPin">Set 4-Digit Security PIN (to lock &amp; access your coupons)</label>
           <input type="password" id="userPin" placeholder="e.g. 1234" maxlength="4" autocomplete="off" oninput="validateStep1()">
-          <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;">Remember this PIN. It prevents others from accessing your flat's coupons.</div>
+          <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;" id="lblPinHelp">Remember this PIN. It prevents others from accessing your flat's coupons.</div>
         </div>
 
         <!-- Privacy Advisory in Step 1 -->
-        <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);">
+        <div class="note" style="margin-top:14px; background:#FFFDF9; border:1px solid var(--line);" id="privacyNote">
           <strong>🔒 Privacy Advisory &amp; Terms:</strong> Your provided Name, Flat Number, and PIN are stored securely to manage and verify your food coupons.
         </div>
         <div class="field" style="margin-top:10px;">
           <label style="display:flex;gap:8px;align-items:flex-start;font-weight:500;">
             <input type="checkbox" id="privacyTermsConfirm" style="margin-top:3px;width:16px;height:16px;flex:none;" onchange="validateStep1()">
-            <span style="font-size:13px; color:var(--maroon-dark);">I accept the Data Privacy Terms &amp; Conditions.</span>
+            <span style="font-size:13px; color:var(--maroon-dark);" id="lblAcceptTerms">I accept the Data Privacy Terms &amp; Conditions.</span>
           </label>
         </div>
 
@@ -618,31 +675,31 @@
         </div>
 
         <p style="margin:12px 0 0; text-align:center;">
-          <button class="btn-ghost" onclick="openMyCoupons()">Already booked? Find my coupons →</button>
+          <button class="btn-ghost" onclick="openMyCoupons()" id="lblFindCouponsBtn">Already booked? Find my coupons →</button>
         </p>
       </div>
 
       <!-- STEP 2: Choose Meals Card -->
       <div class="card" id="chooseMealsCard" style="display:none;">
-        <p class="section-label"><span class="num">2</span>Choose your meals</p>
+        <p class="section-label"><span class="num">2</span><span id="lblStep2Title">Choose your meals</span></p>
         <div class="day-pills" id="dayPills"></div>
         <div id="mealRows"></div>
 
         <div class="step-actions">
-          <button class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+          <button class="btn btn-outline" onclick="goToStep(1)" id="btnBack1">← Back</button>
           <button class="btn btn-primary" style="flex:1;" id="btnNextToStep3" onclick="goToStep(3)" disabled>Next: Review Order →</button>
         </div>
       </div>
 
       <!-- STEP 3: Review & Confirm Card -->
       <div class="card" id="reviewCard" style="display:none;">
-        <p class="section-label"><span class="num">3</span>Review &amp; confirm</p>
+        <p class="section-label"><span class="num">3</span><span id="lblStep3Title">Review &amp; confirm</span></p>
         <div id="summaryRows"></div>
-        <div class="summary-total"><span>Total payable</span><span id="grandTotalLbl">₹0</span></div>
+        <div class="summary-total"><span id="lblTotalPayable">Total payable</span><span id="grandTotalLbl">₹0</span></div>
 
         <div id="paidSection">
           <div class="field" style="margin-top:14px;">
-            <label>How will you pay?</label>
+            <label id="lblHowPay">How will you pay?</label>
             <div class="payment-options-grid">
               <div class="payment-card" id="pmCash" onclick="setPaymentMethod('cash')">
                 <span class="icon">💵</span>
@@ -693,7 +750,7 @@
         </div>
 
         <div class="step-actions" style="margin-top:16px;">
-          <button class="btn btn-outline" onclick="goToStep(2)">← Back</button>
+          <button class="btn btn-outline" onclick="goToStep(2)" id="btnBack2">← Back</button>
           <button class="btn btn-primary" style="flex:1;" id="confirmBookingBtn" onclick="confirmBooking()" disabled>Confirm Booking &amp; Get QR Coupon</button>
         </div>
       </div>
@@ -777,6 +834,17 @@
       </div>
 
       <div id="serveLookupResults"></div>
+    </div>
+  </div>
+
+  <!-- ================= KITCHEN DISPLAY LIVE FEED TAB ================= -->
+  <div id="view-kitchen" class="hidden">
+    <div class="card">
+      <p class="section-label">👨‍🍳 Kitchen Real-Time Live Feed</p>
+      <p style="font-size:13px; color:#6b4a3a; margin-bottom:12px;">Live update of verified plates to cook &amp; parcel boxes to pack for today's active meal slot.</p>
+      <button class="btn btn-outline btn-block" onclick="renderKitchenDisplay()">🔄 Refresh Kitchen Feed</button>
+      
+      <div id="kitchenLiveFeed" class="kitchen-card-grid"></div>
     </div>
   </div>
 
@@ -1078,6 +1146,70 @@ const CONFIG = {
   ]
 };
 
+/* MULTI-LANGUAGE BENGALI DICTIONARY */
+const LANG_DICT = {
+  en: {
+    langBtn: "বাংলা",
+    eyebrow: "Bhog Bela · Food Coupon Booking",
+    heroTitle: "🪔 Shubho Durga Puja",
+    heroSub: "Book breakfast, lunch & dinner coupons for all four days of the pujo — choose veg or non-veg, pay by cash or UPI, get a QR coupon per meal.",
+    step1Title: "Your details",
+    step2Title: "Choose your meals",
+    step3Title: "Review & confirm",
+    fullName: "Full name",
+    selectBlock: "Select Block",
+    selectFlat: "Select Flat Number",
+    setPin: "Set 4-Digit Security PIN (to lock & access your coupons)",
+    pinHelp: "Remember this PIN. It prevents others from accessing your flat's coupons.",
+    privacyTerms: "I accept the Data Privacy Terms & Conditions.",
+    findCouponsBtn: "Already booked? Find my coupons →",
+    totalPayable: "Total payable",
+    howPay: "How will you pay?"
+  },
+  bn: {
+    langBtn: "English",
+    eyebrow: "ভোগ বেলা · ফুড কুপন বুকিং",
+    heroTitle: "🪔 শুভ দুর্গোৎসব ২০২৬",
+    heroSub: "পুজোর চারদিনের সকালের জলখাবার, দুপুরের মধ্যাহ্নভোজ এবং নৈশভোজের কুপন বুক করুন — নিরামিষ বা আমিষ বেছে নিন, কিউআর কুপন পান।",
+    step1Title: "আপনার বিবরণ",
+    step2Title: "খাবার নির্বাচন করুন",
+    step3Title: "যাচাই ও নিশ্চিত করুন",
+    fullName: "সম্পূর্ণ নাম",
+    selectBlock: "ব্লক নির্বাচন করুন",
+    selectFlat: "ফ্ল্যাট নম্বর নির্বাচন করুন",
+    setPin: "৪-সংখ্যার পিন (PIN) সেট করুন",
+    pinHelp: "এই পিনটি মনে রাখুন। এটি আপনার কুপনের সুরক্ষা নিশ্চিত করবে।",
+    privacyTerms: "আমি গোপনীয়তা নীতি ও শর্তাবলী মেনে নিচ্ছি।",
+    findCouponsBtn: "ইতিমধ্যে বুক করেছেন? কুপন খুঁজুন →",
+    totalPayable: "মোট প্রদেয় অর্থ",
+    howPay: "পেমেন্ট কীভাবে করবেন?"
+  }
+};
+
+let currentLang = "en";
+
+function toggleLanguage() {
+  currentLang = (currentLang === "en") ? "bn" : "en";
+  const dict = LANG_DICT[currentLang];
+
+  document.getElementById('langBtn').textContent = dict.langBtn;
+  document.getElementById('eyebrowText').textContent = dict.eyebrow;
+  document.getElementById('heroTitle').textContent = dict.heroTitle;
+  document.getElementById('heroSub').textContent = dict.heroSub;
+  document.getElementById('lblStep1Title').textContent = dict.step1Title;
+  document.getElementById('lblStep2Title').textContent = dict.step2Title;
+  document.getElementById('lblStep3Title').textContent = dict.step3Title;
+  document.getElementById('lblFullName').textContent = dict.fullName;
+  document.getElementById('lblSelectBlock').textContent = dict.selectBlock;
+  document.getElementById('lblSelectFlat').textContent = dict.selectFlat;
+  document.getElementById('lblSetPin').textContent = dict.setPin;
+  document.getElementById('lblPinHelp').textContent = dict.pinHelp;
+  document.getElementById('lblAcceptTerms').textContent = dict.privacyTerms;
+  document.getElementById('lblFindCouponsBtn').textContent = dict.findCouponsBtn;
+  document.getElementById('lblTotalPayable').textContent = dict.totalPayable;
+  document.getElementById('lblHowPay').textContent = dict.howPay;
+}
+
 /* ================= state ================= */
 let cart = {};
 let activeDay = CONFIG.days[0].id;
@@ -1328,11 +1460,14 @@ function showToast(message, tone){
 function switchTab(tab){
   document.getElementById('view-book').classList.toggle('hidden', tab!=='book');
   document.getElementById('view-serve').classList.toggle('hidden', tab!=='serve');
+  document.getElementById('view-kitchen').classList.toggle('hidden', tab!=='kitchen');
   document.getElementById('view-committee').classList.toggle('hidden', tab!=='committee');
   document.getElementById('tabBookBtn').classList.toggle('active', tab==='book');
   document.getElementById('tabServeBtn').classList.toggle('active', tab==='serve');
+  document.getElementById('tabKitchenBtn').classList.toggle('active', tab==='kitchen');
   document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
   if(tab!=='serve') stopCamera();
+  if(tab==='kitchen') renderKitchenDisplay();
 }
 
 /* ================= render day pills + meal rows ================= */
@@ -1879,11 +2014,34 @@ function renderTicket(b){
       </div>
     </div>
     <div class="note">Each meal variant has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
-    <button class="btn btn-primary btn-block" style="margin-top:10px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
+    <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
+    <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
     <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">Book More Coupons</button>
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
   `;
   mountMealQrCodes(b, document);
+}
+
+/* SHARE TICKET DIRECTLY ON WHATSAPP */
+async function shareTicketWhatsApp(orderId) {
+  const b = await fetchBooking(orderId);
+  if (!b) return;
+
+  let msg = `🪔 *Bhog Bela — Durga Puja Food Coupon*\n`;
+  msg += `*Order ID:* ${b.orderId}\n`;
+  msg += `*Name:* ${b.name}\n`;
+  msg += `*Flat:* ${b.flatNumber}\n`;
+  msg += `*Status:* ${b.paymentStatus.toUpperCase()}\n\n`;
+  msg += `*Booked Meals:*\n`;
+
+  b.items.forEach(it => {
+    msg += `• ${it.dayLabel} - ${it.mealLabel} (${it.type ? (it.type==='veg'?'Veg':'Non-veg') : 'Standard'}) x${it.qty}\n`;
+  });
+
+  msg += `\nShow your Order ID or QR code at the counter to collect your bhog!`;
+
+  const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank');
 }
 
 /* DOWNLOAD TICKET AS IMAGE (PNG) */
@@ -1998,8 +2156,82 @@ function renderMiniTicketInto(container, b){
       <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
       <div class="ticket-pay">${paymentMethodLabel(b)}</div>
       ${renderBookingMealsHtml(b)}
+      <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
     </div>`;
   mountMealQrCodes(b, container);
+}
+
+/* ================= KITCHEN DISPLAY LIVE FEED ================= */
+async function renderKitchenDisplay() {
+  const container = document.getElementById('kitchenLiveFeed');
+  container.innerHTML = '<div class="empty">Loading kitchen live numbers…</div>';
+
+  try {
+    const all = await window.dbGetAllBookings();
+    const liveStats = {};
+
+    all.forEach(b => {
+      if (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary') {
+        (b.items || []).forEach(it => {
+          const key = `${it.dayLabel} — ${it.mealLabel}`;
+          if (!liveStats[key]) {
+            liveStats[key] = { 
+              day: it.dayLabel, 
+              meal: it.mealLabel, 
+              vegDineIn: 0, vegParcel: 0, 
+              nonvegDineIn: 0, nonvegParcel: 0, 
+              served: 0 
+            };
+          }
+
+          const parcel = it.parcelQty || 0;
+          const dineIn = (it.qty || 0) - parcel;
+
+          if (it.type === 'veg') {
+            liveStats[key].vegDineIn += dineIn;
+            liveStats[key].vegParcel += parcel;
+          } else if (it.type === 'nonveg') {
+            liveStats[key].nonvegDineIn += dineIn;
+            liveStats[key].nonvegParcel += parcel;
+          } else {
+            liveStats[key].vegDineIn += dineIn;
+            liveStats[key].vegParcel += parcel;
+          }
+
+          liveStats[key].served += (it.delivered || 0);
+        });
+      }
+    });
+
+    if (Object.keys(liveStats).length === 0) {
+      container.innerHTML = '<div class="empty">No verified bookings yet for the kitchen.</div>';
+      return;
+    }
+
+    container.innerHTML = '';
+    Object.values(liveStats).forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'kitchen-card';
+      card.innerHTML = `
+        <div class="kitchen-card-title">${item.day} · ${item.meal}</div>
+        <div class="kitchen-counts-row">
+          <div>
+            <div class="k-val" style="color:var(--green);">${item.vegDineIn + item.vegParcel}</div>
+            <div class="k-lbl">🟢 Veg Total</div>
+            <div style="font-size:11px;color:#8a6a55;">(${item.vegDineIn} Counter / ${item.vegParcel} Box)</div>
+          </div>
+          <div style="border-left:1px solid var(--line); padding-left:14px;">
+            <div class="k-val" style="color:#B4501D;">${item.nonvegDineIn + item.nonvegParcel}</div>
+            <div class="k-lbl">🔺 Non-Veg Total</div>
+            <div style="font-size:11px;color:#8a6a55;">(${item.nonvegDineIn} Counter / ${item.nonvegParcel} Box)</div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  } catch(e) {
+    container.innerHTML = '<div class="empty">Error fetching live kitchen feed.</div>';
+  }
 }
 
 /* ================= COMMITTEE ADMIN & BULK CSV UPLOAD ================= */
