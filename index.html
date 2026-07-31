@@ -140,7 +140,7 @@
     font-size:12px;font-weight:700;flex:none;
   }
   label{font-size:13px;font-weight:600;color:var(--maroon-dark);display:block;margin-bottom:4px;}
-  input[type=text],input[type=tel]{
+  input[type=text],input[type=tel],select{
     width:100%;
     border:1.5px solid var(--line);
     border-radius:10px;
@@ -150,7 +150,7 @@
     background:#FFFDF9;
     color:var(--ink);
   }
-  input:focus{outline:2px solid var(--marigold);outline-offset:1px;}
+  input:focus,select:focus{outline:2px solid var(--marigold);outline-offset:1px;}
   .field{margin-bottom:12px;}
   .row2{display:flex;gap:10px;}
   .row2>.field{flex:1;}
@@ -426,11 +426,29 @@
           <label for="userName">Full name</label>
           <input type="text" id="userName" placeholder="e.g. Ritwik Sen" autocomplete="name">
         </div>
-        <div class="field">
-          <label for="userFlat">Flat / Block (A1, A2, B, C1, C2, C3)</label>
-          <input type="text" id="userFlat" placeholder="e.g. A1-204, B-101" autocomplete="off">
-          <div id="flatHelpText" style="font-size:11.5px; color:#8a1f1f; margin-top:4px;" class="hidden">Flat must start with Block A1, A2, B, C1, C2, or C3 (e.g. A1-102, B-301).</div>
+        
+        <!-- Cascading Flat Dropdown Selector -->
+        <div class="row2">
+          <div class="field">
+            <label for="blockSelect">Select Block</label>
+            <select id="blockSelect" onchange="onBlockChange()">
+              <option value="">-- Choose Block --</option>
+              <option value="A1">Block A1</option>
+              <option value="A2">Block A2</option>
+              <option value="B">Block B</option>
+              <option value="C1">Block C1</option>
+              <option value="C2">Block C2</option>
+              <option value="C3">Block C3</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="flatSelect">Select Flat Number</label>
+            <select id="flatSelect" disabled>
+              <option value="">-- Select Block First --</option>
+            </select>
+          </div>
         </div>
+
         <p style="margin:0;">
           <button class="btn-ghost" onclick="openMyCoupons()">Already booked? Find my coupons →</button>
         </p>
@@ -517,10 +535,28 @@
           <label for="searchName">Full Name</label>
           <input type="text" id="searchName" placeholder="Enter full name">
         </div>
-        <div class="field">
-          <label for="searchFlat">Flat / Block</label>
-          <input type="text" id="searchFlat" placeholder="e.g. A1-204">
+        
+        <div class="row2">
+          <div class="field">
+            <label for="searchBlockSelect">Block</label>
+            <select id="searchBlockSelect" onchange="onSearchBlockChange()">
+              <option value="">-- Select Block --</option>
+              <option value="A1">Block A1</option>
+              <option value="A2">Block A2</option>
+              <option value="B">Block B</option>
+              <option value="C1">Block C1</option>
+              <option value="C2">Block C2</option>
+              <option value="C3">Block C3</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="searchFlatSelect">Flat Number</label>
+            <select id="searchFlatSelect" disabled>
+              <option value="">-- Select Block First --</option>
+            </select>
+          </div>
         </div>
+
         <button class="btn btn-primary btn-block" onclick="searchMyCoupons()">Search Coupons</button>
         <p style="margin:10px 0 0;"><button class="btn-ghost" onclick="backToBookForm()">← Back to booking</button></p>
       </div>
@@ -755,6 +791,47 @@ let camStream = null, camLoopHandle = null;
 let ticketUnsubscribe = null;
 let selectedPaymentMethod = null;
 
+/* Helper to generate flat number options dynamically */
+function generateFlatOptions(block) {
+  let options = '<option value="">-- Select Flat --</option>';
+  if (!block) return options;
+
+  let maxFloors = (block === 'A1' || block === 'A2') ? 11 : 12;
+  let flatsPerFloor = (block === 'A1' || block === 'A2') ? 2 : 6;
+
+  for (let floor = 1; floor <= maxFloors; floor++) {
+    for (let flatNum = 1; flatNum <= flatsPerFloor; flatNum++) {
+      let flatStr = `${floor}${flatNum < 10 ? '0' + flatNum : flatNum}`;
+      options += `<option value="${flatStr}">${flatStr}</option>`;
+    }
+  }
+  return options;
+}
+
+function onBlockChange() {
+  const block = document.getElementById('blockSelect').value;
+  const flatSelect = document.getElementById('flatSelect');
+  if (block) {
+    flatSelect.innerHTML = generateFlatOptions(block);
+    flatSelect.disabled = false;
+  } else {
+    flatSelect.innerHTML = '<option value="">-- Select Block First --</option>';
+    flatSelect.disabled = true;
+  }
+}
+
+function onSearchBlockChange() {
+  const block = document.getElementById('searchBlockSelect').value;
+  const flatSelect = document.getElementById('searchFlatSelect');
+  if (block) {
+    flatSelect.innerHTML = generateFlatOptions(block);
+    flatSelect.disabled = false;
+  } else {
+    flatSelect.innerHTML = '<option value="">-- Select Block First --</option>';
+    flatSelect.disabled = true;
+  }
+}
+
 function cartKey(day, meal){ return day + '_' + meal; }
 function getRow(day, meal){
   const k = cartKey(day, meal);
@@ -974,11 +1051,6 @@ function setPaymentMethod(method){
   validateConfirmButtonState();
 }
 
-function validateFlatNumber(flatStr) {
-  const pattern = /^(A1|A2|B|C1|C2|C3)([-_\s]*\d+)?$/i;
-  return pattern.test(flatStr.trim());
-}
-
 function validateConfirmButtonState(){
   const confirmBtn = document.getElementById('confirmBookingBtn');
   const termsChecked = document.getElementById('privacyTermsConfirm').checked;
@@ -1026,28 +1098,20 @@ document.addEventListener('change', (e)=>{
 });
 document.addEventListener('input', (e)=>{
   if(e.target && e.target.id==='utrInput') validateConfirmButtonState();
-  if(e.target && e.target.id==='userFlat') {
-    const val = e.target.value.trim();
-    const help = document.getElementById('flatHelpText');
-    if(val.length > 0 && !validateFlatNumber(val)) {
-      help.classList.remove('hidden');
-    } else {
-      help.classList.add('hidden');
-    }
-  }
 });
 
 /* ================= review & payment ================= */
 function goToReview(){
   const name = document.getElementById('userName').value.trim();
-  const flat = document.getElementById('userFlat').value.trim();
+  const block = document.getElementById('blockSelect').value;
+  const flat = document.getElementById('flatSelect').value;
   
   if(!name){
     alert('Please enter your full name.');
     return;
   }
-  if(!validateFlatNumber(flat)){
-    alert('Please enter a valid Flat/Block starting with A1, A2, B, C1, C2, or C3 (e.g. A1-204, B-101).');
+  if(!block || !flat){
+    alert('Please select both your Block and Flat number from the dropdowns.');
     return;
   }
   if(itemCount()<=0){ alert('Please select at least one meal.'); return; }
@@ -1120,7 +1184,10 @@ function genOrderId(){
 
 async function confirmBooking(){
   const name = document.getElementById('userName').value.trim();
-  const flat = document.getElementById('userFlat').value.trim();
+  const block = document.getElementById('blockSelect').value;
+  const flat = document.getElementById('flatSelect').value;
+  const fullFlatNumber = `${block}-${flat}`;
+  
   const utrEl = document.getElementById('utrInput');
   const utr = utrEl ? utrEl.value.trim() : '';
   const total = grandTotal();
@@ -1154,7 +1221,7 @@ async function confirmBooking(){
 
   const orderId = genOrderId();
   const booking = {
-    orderId, name, flatNumber: flat, items,
+    orderId, name, flatNumber: fullFlatNumber, items,
     total,
     paymentMethod,
     utr: (paymentMethod==='upi') ? (utr || null) : null,
@@ -1306,7 +1373,12 @@ function startOver(existingName = '', existingFlat = ''){
   cart = {}; lastBooking = null; selectedPaymentMethod = null;
   
   document.getElementById('userName').value = existingName;
-  document.getElementById('userFlat').value = existingFlat;
+  if(existingFlat && existingFlat.includes('-')) {
+    const parts = existingFlat.split('-');
+    document.getElementById('blockSelect').value = parts[0];
+    onBlockChange();
+    document.getElementById('flatSelect').value = parts[1];
+  }
   
   if(document.getElementById('utrInput')) document.getElementById('utrInput').value='';
   if(document.getElementById('paidConfirm')) document.getElementById('paidConfirm').checked = false;
@@ -1339,17 +1411,19 @@ function backToBookForm(){
 }
 async function searchMyCoupons(){
   const name = document.getElementById('searchName').value.trim();
-  const flat = document.getElementById('searchFlat').value.trim();
+  const block = document.getElementById('searchBlockSelect').value;
+  const flat = document.getElementById('searchFlatSelect').value;
   const results = document.getElementById('myCouponsResults');
   
-  if(!name || !validateFlatNumber(flat)){ 
-    results.innerHTML = '<div class="empty">Enter a valid full name and flat number (starting with A1, A2, B, C1, C2, or C3).</div>'; 
+  if(!name || !block || !flat){ 
+    results.innerHTML = '<div class="empty">Please enter full name and select both Block and Flat from dropdowns.</div>'; 
     return; 
   }
   
+  const fullFlatNumber = `${block}-${flat}`;
   results.innerHTML = '<div class="empty">Searching…</div>';
   try{
-    const matches = await window.dbGetBookingsByNameAndFlat(name, flat);
+    const matches = await window.dbGetBookingsByNameAndFlat(name, fullFlatNumber);
     if(matches.length===0){ results.innerHTML = '<div class="empty">No bookings found for these details.</div>'; return; }
     matches.sort((a,b)=>b.createdAt-a.createdAt);
     results.innerHTML='';
@@ -1441,7 +1515,6 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
   if(b) {
     matches.push(b);
   } else {
-    // Search across all bookings if name or flat matches query
     const all = await window.dbGetAllBookings();
     const qLower = queryVal.toLowerCase();
     all.forEach(item => {
