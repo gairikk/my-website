@@ -1655,17 +1655,19 @@ function renderBookingMealsHtml(b){
 function mountMealQrCodes(b){
   const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
   if(!isUnlocked) return;
-  setTimeout(() => {
-    b.items.forEach(async (it) => {
-      const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
-      const el = document.getElementById(qid);
-      if(el){
-        el.innerHTML = '';
-        const signedPayload = await mealQrPayloadHMAC(b, it);
-        new QRCode(el, { text: signedPayload, width:140, height:140, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
-      }
-    });
-  }, 50);
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      b.items.forEach(async (it) => {
+        const qid = `qr_${b.orderId}_${it.day}_${it.meal}`;
+        const el = document.getElementById(qid);
+        if(el && el.children.length === 0){
+          el.innerHTML = '';
+          const signedPayload = await mealQrPayloadHMAC(b, it);
+          new QRCode(el, { text: signedPayload, width:140, height:140, colorDark:'#2B0F0F', colorLight:'#FFFFFF' });
+        }
+      });
+    }, 100);
+  });
 }
 
 function renderTicket(b){
