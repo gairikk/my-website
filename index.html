@@ -716,7 +716,7 @@
     });
   };
 
-  /* CASE-INSENSITIVE & DASH-FLEXIBLE PUJA SUBSCRIPTION VERIFICATION CHECK */
+  /* CASE-INSENSITIVE & DASH-FLEXIBLE ANNUAL FESTIVAL SUBSCRIPTION VERIFICATION CHECK */
   window.dbCheckSubscription = async function(fullFlatNumber) {
     // Normalizes en-dashes/em-dashes to standard hyphens
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
@@ -868,16 +868,16 @@ async function checkSubscriptionStatus() {
   }
 
   const fullFlatNumber = `${block}-${flat}`;
-  msgEl.innerHTML = '<div style="font-size:12.5px; color:#8a6a55; margin-top:6px;">Checking Puja Subscription status…</div>';
+  msgEl.innerHTML = '<div style="font-size:12.5px; color:#8a6a55; margin-top:6px;">Checking Annual Festival Subscription status…</div>';
 
   try {
     const paid = await window.dbCheckSubscription(fullFlatNumber);
     isSubscriptionPaid = paid;
 
     if (paid) {
-      msgEl.innerHTML = '<div class="msg ok" style="margin-top:6px; font-weight:600;">✓ Puja Subscription Verified for Flat ' + fullFlatNumber + '</div>';
+      msgEl.innerHTML = '<div class="msg ok" style="margin-top:6px; font-weight:600;">✓ Annual Festival Subscription Verified for Flat ' + fullFlatNumber + '</div>';
     } else {
-      msgEl.innerHTML = '<div class="msg err" style="margin-top:6px;">⚠️ <strong>Subscription Unpaid</strong>: Food coupon booking is restricted to flats that have cleared the Puja Subscription.</div>';
+      msgEl.innerHTML = '<div class="msg err" style="margin-top:6px;">⚠️ <strong>Subscription Unpaid</strong>: Food coupon booking is restricted to flats that have cleared the Annual Festival Subscription.</div>';
     }
   } catch (e) {
     msgEl.innerHTML = '<div class="msg err" style="margin-top:6px;">Could not verify subscription status. Please try again.</div>';
@@ -1180,7 +1180,7 @@ function goToReview(){
   const userPin = document.getElementById('userPin').value.trim();
   
   if(!isSubscriptionPaid) {
-    alert('Food coupon booking is restricted because the Puja Subscription is unpaid for this flat.');
+    alert('Food coupon booking is restricted because the Annual Festival Subscription is unpaid for this flat.');
     return;
   }
   if(!name){
