@@ -1063,6 +1063,7 @@
     return onSnapshot(ref, (snap) => {
       if(snap.exists()) {
         const data = snap.data();
+        window.activeBookingCache[data.orderId] = data;
         if (!isInitial && data.paymentStatus === 'verified') {
           showToast('🎉 Your payment has been verified by the committee! QR codes are now unlocked.', 'good');
         }
@@ -1139,6 +1140,7 @@
         data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim() &&
         data.userPin && data.userPin === pin.trim()
       ) {
+        window.activeBookingCache[data.orderId] = data;
         results.push(data);
       }
     });
@@ -1149,7 +1151,11 @@
     const q = query(collection(db, "bookings"), where("flatNumber", "==", flat.trim()));
     const snap = await getDocs(q);
     const results = [];
-    snap.forEach(d => results.push(d.data()));
+    snap.forEach(d => {
+      const data = d.data();
+      window.activeBookingCache[data.orderId] = data;
+      results.push(data);
+    });
     return results;
   };
 
@@ -1164,7 +1170,11 @@
   window.dbGetAllBookings = async function() {
     const snap = await getDocs(collection(db, "bookings"));
     const results = [];
-    snap.forEach(d => results.push(d.data()));
+    snap.forEach(d => {
+      const data = d.data();
+      window.activeBookingCache[data.orderId] = data;
+      results.push(data);
+    });
     return results;
   };
 </script>
@@ -1296,8 +1306,8 @@ let isSubscriptionPaid = false;
 let currentStep = 1;
 let selectedCsvFile = null;
 
-/* STORE MAPPED CACHE OF SEARCHED BOOKINGS FOR TAB SWITCHING */
-let activeSearchedBookings = {};
+/* GLOBAL ACTIVE BOOKING CACHE FOR TAB SWITCHING */
+window.activeBookingCache = {};
 
 /* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR & VERIFIER FIX */
 async function generateHMACSignature(dataStr) {
@@ -2000,10 +2010,12 @@ async function confirmBooking(){
   btn.disabled = true; btn.textContent = 'Saving…';
   try{
     await window.dbSetBooking(booking);
+    window.activeBookingCache[orderId] = booking;
     lastBooking = booking;
 
     if(ticketUnsubscribe) ticketUnsubscribe();
     ticketUnsubscribe = window.dbListenToBooking(orderId, (updatedBooking) => {
+      window.activeBookingCache[orderId] = updatedBooking;
       renderTicket(updatedBooking);
     });
 
@@ -2164,17 +2176,33 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   mountMealQrCodes(b, container);
 }
 
-/* EXPOSE TAB SWITCHERS GLOBALLY */
+/* EXPOSE TAB SWITCHERS GLOBALLY USING CACHED BOOKINGS */
 window.switchTicketDay = function(orderId, dayId) {
-  fetchBooking(orderId).then(b => {
-    if(b) renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, null);
-  });
+  const b = window.activeBookingCache[orderId];
+  if (b) {
+    renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, null);
+  } else {
+    fetchBooking(orderId).then(booking => {
+      if(booking) {
+        window.activeBookingCache[orderId] = booking;
+        renderTabbedTicketContent(booking, `ticketTabArea_${orderId}`, dayId, null);
+      }
+    });
+  }
 };
 
 window.switchTicketMeal = function(orderId, dayId, mealKey) {
-  fetchBooking(orderId).then(b => {
-    if(b) renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, mealKey);
-  });
+  const b = window.activeBookingCache[orderId];
+  if (b) {
+    renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, mealKey);
+  } else {
+    fetchBooking(orderId).then(booking => {
+      if(booking) {
+        window.activeBookingCache[orderId] = booking;
+        renderTabbedTicketContent(booking, `ticketTabArea_${orderId}`, dayId, mealKey);
+      }
+    });
+  }
 };
 
 /* SHARE TICKET DIRECTLY ON WHATSAPP */
@@ -2469,11 +2497,15 @@ function checkServePin(){
 }
 
 async function fetchBooking(orderId){
+  if(window.activeBookingCache[orderId]) return window.activeBookingCache[orderId];
   try{
-    return await window.dbGetBooking(orderId);
+    const b = await window.dbGetBooking(orderId);
+    if(b) window.activeBookingCache[orderId] = b;
+    return b;
   }catch(e){ return null; }
 }
 async function saveBooking(b){
+  window.activeBookingCache[b.orderId] = b;
   await window.dbSetBooking(b);
 }
 
