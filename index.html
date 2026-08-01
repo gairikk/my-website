@@ -1084,23 +1084,32 @@
     return false;
   };
 
-  window.dbCheckFlatRegistrationMatch = async function(fullFlatNumber, inputName) {
+  /* SINGLE ORDER ID PER FLAT & NAME POLICY: Merges subsequent bookings into the existing order ID */
+  window.dbGetOrCreateActiveBooking = async function(fullFlatNumber, name, pin) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
     const snap = await getDocs(q);
     
-    if (snap.empty) return { allowed: true };
-
-    let existingName = "";
+    let existingBooking = null;
     snap.forEach(d => {
-      existingName = d.data().name || "";
+      const data = d.data();
+      if (data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim()) {
+        existingBooking = data;
+      }
     });
 
-    const isSameName = existingName.toLowerCase().trim() === inputName.toLowerCase().trim();
-    return {
-      allowed: isSameName,
-      existingName: existingName
-    };
+    if (existingBooking) {
+      return { booking: existingBooking, isNew: false };
+    }
+
+    // Check if flat is already taken by a different name
+    if (!snap.empty) {
+      let otherName = "";
+      snap.forEach(d => { otherName = d.data().name; });
+      return { restricted: true, existingName: otherName };
+    }
+
+    return { allowed: true, isNew: true };
   };
 
   window.dbBulkUploadSubscriptions = async function(subscriptionRows) {
@@ -1338,9 +1347,9 @@ async function goToStep(stepNumber) {
 
     const fullFlatNumber = `${block}-${flat}`;
     try {
-      const checkResult = await window.dbCheckFlatRegistrationMatch(fullFlatNumber, name);
-      if (!checkResult.allowed) {
-        alert(`❌ Registration Restricted: Flat ${fullFlatNumber} is already registered under "${checkResult.existingName}". New names cannot book coupons for a flat already registered under another name. Please use "My Coupons" to access your existing booking.`);
+      const checkRes = await window.dbGetOrCreateActiveBooking(fullFlatNumber, name, userPin);
+      if (checkRes.restricted) {
+        alert(`❌ Registration Restricted: Flat ${fullFlatNumber} is already registered under "${checkRes.existingName}". New names cannot book coupons for a flat already registered under another name.`);
         return;
       }
     } catch(e) {
@@ -1963,14 +1972,14 @@ async function confirmBooking(){
     }
   }
 
-  const items = [];
+  const newItems = [];
   Object.keys(cart).forEach(k=>{
     const row = cart[k];
     const [day, meal] = k.split('_');
     const info = effectiveInfo(day, meal);
 
     if(row.vegQty > 0) {
-      items.push({
+      newItems.push({
         day, dayLabel: dayDef(day).label,
         meal, mealLabel: info.label,
         type: 'veg',
@@ -1982,7 +1991,7 @@ async function confirmBooking(){
     }
 
     if(row.nonvegQty > 0) {
-      items.push({
+      newItems.push({
         day, dayLabel: dayDef(day).label,
         meal, mealLabel: info.label,
         type: 'nonveg',
@@ -1994,27 +2003,43 @@ async function confirmBooking(){
     }
   });
 
-  const orderId = genOrderId();
-  const booking = {
-    orderId, name, flatNumber: fullFlatNumber, userPin, items,
-    total,
-    paymentMethod,
-    utr: (paymentMethod==='upi') ? (utr || null) : null,
-    paymentStatus: total>0 ? 'pending' : 'complimentary',
-    createdAt: Date.now(),
-    verifiedAt: null
-  };
-
   const btn = document.getElementById('confirmBookingBtn');
   btn.disabled = true; btn.textContent = 'Saving…';
   try{
+    // Check if an existing booking already exists for this flat & name to merge items into the same Order ID
+    const existingActive = await window.dbGetOrCreateActiveBooking(fullFlatNumber, name, userPin);
+    let booking;
+
+    if (existingActive && existingActive.booking) {
+      booking = existingActive.booking;
+      // Merge items & add to total
+      booking.items = booking.items.concat(newItems);
+      booking.total += total;
+      if(total > 0 && booking.paymentStatus === 'complimentary') {
+        booking.paymentStatus = 'pending';
+        booking.paymentMethod = paymentMethod;
+        booking.utr = utr || null;
+      }
+    } else {
+      const orderId = genOrderId();
+      booking = {
+        orderId, name, flatNumber: fullFlatNumber, userPin, items: newItems,
+        total,
+        paymentMethod,
+        utr: (paymentMethod==='upi') ? (utr || null) : null,
+        paymentStatus: total>0 ? 'pending' : 'complimentary',
+        createdAt: Date.now(),
+        verifiedAt: null
+      };
+    }
+
     await window.dbSetBooking(booking);
-    window.activeBookingCache[orderId] = booking;
+    window.activeBookingCache[booking.orderId] = booking;
     lastBooking = booking;
 
     if(ticketUnsubscribe) ticketUnsubscribe();
-    ticketUnsubscribe = window.dbListenToBooking(orderId, (updatedBooking) => {
-      window.activeBookingCache[orderId] = updatedBooking;
+    ticketUnsubscribe = window.dbListenToBooking(booking.orderId, (updatedBooking) => {
+      window.activeBookingCache[booking.orderId] = updatedBooking;
       renderTicket(updatedBooking);
     });
 
@@ -2024,9 +2049,9 @@ async function confirmBooking(){
     window.scrollTo({top:0, behavior:'smooth'});
 
     if(booking.paymentStatus === 'pending'){
-      showToast('✅ Successfully booked! Verification Pending', 'warn');
+      showToast('✅ Successfully booked & merged into Order ID!', 'warn');
     } else {
-      showToast('🎁 Successfully booked! Your bhog is confirmed.', 'good');
+      showToast('🎁 Successfully booked & confirmed!', 'good');
     }
   }catch(err){
     console.error(err);
