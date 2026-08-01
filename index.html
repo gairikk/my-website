@@ -182,6 +182,29 @@
     border-color: var(--maroon);
   }
 
+  /* Refined Breakdown Box inside QR ticket card */
+  .plate-breakdown-box {
+    display: flex;
+    justify-content: space-around;
+    background: #FFF8ED;
+    border: 1.5px dashed var(--gold);
+    border-radius: 10px;
+    padding: 8px;
+    margin: 10px 0;
+    text-align: center;
+  }
+  .pb-item .p-val {
+    font-family: 'Baloo 2', cursive;
+    font-weight: 800;
+    font-size: 16px;
+    color: var(--maroon-dark);
+  }
+  .pb-item .p-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    color: #8a6a55;
+  }
+
   /* ---------- Progress Stepper Bar ---------- */
   .stepper-bar{
     display:flex;
@@ -1922,7 +1945,7 @@ async function prepareReviewStep(){
   globalEarlierPaidAmount = earlierPaid;
   const combinedTotal = earlierPaid + newBookingTotal;
 
-  // Display only the new booking amount as the payable amount in Step 3
+  // Show only the new booking amount as the payable amount in Step 3
   document.getElementById('grandTotalLbl').textContent = '₹' + newBookingTotal;
   document.getElementById('paidAmountLbl').textContent = newBookingTotal;
   document.getElementById('cashAmountLbl').textContent = newBookingTotal;
@@ -2037,7 +2060,7 @@ async function confirmBooking(){
     if (existingActive && existingActive.booking) {
       booking = existingActive.booking;
       
-      // Merge new items into existing items array (combining quantities if same day/meal/type exists)
+      // Smart merging: Combine quantities if the same meal/day/type already exists
       newItems.forEach(newItem => {
         const existingItem = booking.items.find(i => i.day === newItem.day && i.meal === newItem.meal && i.type === newItem.type);
         if (existingItem) {
@@ -2048,14 +2071,12 @@ async function confirmBooking(){
         }
       });
 
-      // Add only the new booking amount to the aggregated total
       booking.total += newBookingTotal;
       
       if (newBookingTotal > 0) {
         booking.paymentStatus = 'pending';
         booking.paymentMethod = paymentMethod;
         booking.utr = utr || null;
-        // Keep track of the pending new amount for admin review display
         booking.pendingNewAmount = newBookingTotal;
       }
     } else {
@@ -2165,7 +2186,7 @@ function renderTicket(b, isFromMyCouponsTab = false){
     <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
     
-    <!-- Show 'Book More Coupons' when viewing from My Coupons tab or success ticket -->
+    <!-- Show 'Book More Coupons' when viewing ticket -->
     <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
@@ -2224,6 +2245,18 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     const dineInCount = (selectedItem.qty || 0) - parcelCount;
     let packagingTags = parcelCount > 0 ? `<span class="tag parcel">📦 ${parcelCount} Parcel</span>` : `<span class="tag dinein">🍽️ Dine-in</span>`;
 
+    // Refined breakdown box showing exact Dine-in vs Parcel counts if qty > 1
+    let breakdownBox = '';
+    if (selectedItem.qty > 1 || parcelCount > 0) {
+      breakdownBox = `
+        <div class="plate-breakdown-box">
+          <div class="pb-item"><div class="p-val">${dineInCount}</div><div class="p-lbl">🍽️ Dine-in</div></div>
+          <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${parcelCount}</div><div class="p-lbl">📦 Parcel Box</div></div>
+          <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${selectedItem.qty}</div><div class="p-lbl">Total Plates</div></div>
+        </div>
+      `;
+    }
+
     const qid = `qr_${b.orderId}_${selectedItem.day}_${selectedItem.meal}_${selectedItem.type}`;
     html += `
       <div class="meal-qr-card" style="margin-top:6px;">
@@ -2231,6 +2264,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
           <span class="lbl">${selectedItem.mealLabel}${typeTag}${freeTag}${packagingTags}</span>
           <span class="val">${selectedItem.delivered}/${selectedItem.qty} served</span>
         </div>
+        ${breakdownBox}
         ${isUnlocked
           ? `<div class="qr-wrap" id="${qid}"></div>`
           : `<div class="qr-locked">🔒 Unlocks automatically once payment is verified</div>`}
@@ -2403,6 +2437,8 @@ function renderMiniTicketInto(container, b){
       <div id="miniTabArea_${b.orderId}"></div>
 
       <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
+      
+      <!-- 'Book More Coupons' is shown inside My Coupons search results -->
       <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     </div>`;
   renderTabbedTicketContent(b, `miniTabArea_${b.orderId}`);
@@ -2696,7 +2732,6 @@ function paintLookupCard(b, isFromFoodCounter = false){
   const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
   const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
 
-  // Calculate bifurcation for Admin review/verification view
   const aggregatedTotal = b.total || 0;
   const newBookingAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : (b.paymentStatus === 'pending' ? aggregatedTotal : 0);
   const alreadyPaidAmt = aggregatedTotal - newBookingAmt;
