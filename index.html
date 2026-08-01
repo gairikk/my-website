@@ -182,7 +182,7 @@
     border-color: var(--maroon);
   }
 
-  /* Refined Breakdown Box inside QR ticket card */
+  /* Refined Breakdown Box inside QR ticket card (Universal for all meals) */
   .plate-breakdown-box {
     display: flex;
     justify-content: space-around;
@@ -2068,7 +2068,7 @@ async function confirmBooking(){
     if (existingActive && existingActive.booking) {
       booking = existingActive.booking;
       
-      // Smart merging: Combine quantities if the same meal/day/type already exists
+      // Smart merging: Combine quantities if the same meal/day/type already exists into the exact same item row
       newItems.forEach(newItem => {
         const existingItem = booking.items.find(i => i.day === newItem.day && i.meal === newItem.meal && i.type === newItem.type);
         if (existingItem) {
@@ -2253,16 +2253,14 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     const dineInCount = (selectedItem.qty || 0) - parcelCount;
     let packagingTags = parcelCount > 0 ? `<span class="tag parcel">📦 ${parcelCount} Parcel</span>` : `<span class="tag dinein">🍽️ Dine-in</span>`;
 
-    let breakdownBox = '';
-    if (selectedItem.qty > 1 || parcelCount > 0) {
-      breakdownBox = `
-        <div class="plate-breakdown-box">
-          <div class="pb-item"><div class="p-val">${dineInCount}</div><div class="p-lbl">🍽️ Dine-in</div></div>
-          <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${parcelCount}</div><div class="p-lbl">📦 Parcel Box</div></div>
-          <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${selectedItem.qty}</div><div class="p-lbl">Total Plates</div></div>
-        </div>
-      `;
-    }
+    // UNIVERSAL PLATE BREAKDOWN BOX FOR ALL MEALS & DAYS (Shows Dine-In, Parcel Box, Total Plates)
+    let breakdownBox = `
+      <div class="plate-breakdown-box">
+        <div class="pb-item"><div class="p-val">${dineInCount}</div><div class="p-lbl">🍽️ Dine-In</div></div>
+        <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${parcelCount}</div><div class="p-lbl">📦 Parcel Box</div></div>
+        <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${selectedItem.qty}</div><div class="p-lbl">Total Plates</div></div>
+      </div>
+    `;
 
     const qid = `qr_${b.orderId}_${selectedItem.day}_${selectedItem.meal}_${selectedItem.type}`;
     html += `
@@ -2739,6 +2737,7 @@ function paintLookupCard(b, isFromFoodCounter = false){
   const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
   const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
 
+  // Admin Bifurcation Fix: Aggregated total = already paid + new booking amount
   const aggregatedTotal = b.total || 0;
   const newBookingAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : (b.paymentStatus === 'pending' ? aggregatedTotal : 0);
   const alreadyPaidAmt = aggregatedTotal - newBookingAmt;
@@ -2756,9 +2755,9 @@ function paintLookupCard(b, isFromFoodCounter = false){
       <div class="note alert" style="margin-top:0; margin-bottom:12px;">
         ⚠️ <strong>Payment Unverified</strong>: Verify payment in Committee tab before serving meals.<br><br>
         <strong>Payment Bifurcation:</strong><br>
-        • Total Amount (Aggregated all bookings): <strong>₹${aggregatedTotal}</strong><br>
-        • Already Paid (Earlier bookings): <strong>₹${alreadyPaidAmt}</strong><br>
-        • New Booking Amount (To be verified now): <strong>₹${newBookingAmt}</strong>
+        • Total Amount = Aggregated amount of all bookings: <strong>₹${aggregatedTotal}</strong><br>
+        • Already Paid = Amount paid for earlier bookings: <strong>₹${alreadyPaidAmt}</strong><br>
+        • New Booking Amount = Amount to be verified now (${b.paymentMethod === 'cash' ? 'Paid in Cash' : 'Paid via UPI to be verified via URN'}): <strong>₹${newBookingAmt}</strong>
       </div>
     ` : ''}
 
@@ -2795,7 +2794,7 @@ function paintLookupCard(b, isFromFoodCounter = false){
 
     ${!isFromFoodCounter && b.paymentStatus==='pending' ? `
       <div class="field" style="margin-top:10px;">
-        <label>UTR / reference number for New Amount (₹${newBookingAmt}) ${b.paymentMethod==='cash'?'(not required for cash)':''}</label>
+        <label>UTR / reference number for New Booking Amount (₹${newBookingAmt}) ${b.paymentMethod==='cash'?'(not required for cash)':''}</label>
         <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="${b.paymentMethod==='cash'?'Optional':'Required for UPI verification'}" maxlength="12">
       </div>
       <button class="btn btn-primary btn-block verify-btn" onclick="markVerified('${b.orderId}')">Mark Payment Verified</button>
@@ -3131,7 +3130,7 @@ function scanLoop(){
         stopCamera();
         window.scrollTo({top:0, behavior:'smooth'});
         if(payload.day && payload.meal && payload.type){
-          handleMealScan(payload.orderId, payload.day, payload.meal, payload.type, payload.mac);
+          handleMealScan(payload.orderId, payload.day, payload.meal, payload.type, payload.hmac);
         } else {
           document.getElementById('serveLookupInput').value = payload.orderId;
           doLookupDirect('serveLookupInput');
