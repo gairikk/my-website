@@ -55,17 +55,43 @@
   .toast.good{ background:var(--green); }
   .toast.warn{ background:var(--marigold); }
 
-  /* ---------- Header / Hero ---------- */
+  /* ---------- Header / Hero & Festive Banner ---------- */
   .hero{
     background:
-      radial-gradient(circle at 15% 10%, rgba(228,200,120,0.25), transparent 40%),
-      radial-gradient(circle at 90% 0%, rgba(232,121,45,0.30), transparent 45%),
+      radial-gradient(circle at 15% 10%, rgba(228,200,120,0.3), transparent 40%),
+      radial-gradient(circle at 90% 0%, rgba(232,121,45,0.35), transparent 45%),
       linear-gradient(160deg, var(--maroon) 0%, var(--maroon-dark) 100%);
     color:var(--ivory);
     padding:18px 16px 22px;
     position:relative;
     overflow:hidden;
+    border-bottom: 3px solid var(--gold);
   }
+
+  /* Festive Travelling Animation Banner */
+  .festive-travel-banner {
+    background: rgba(255, 243, 232, 0.12);
+    border: 1px dashed var(--gold-soft);
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    position: relative;
+    white-space: nowrap;
+  }
+  .traveling-text {
+    display: inline-block;
+    font-family: 'Baloo 2', cursive;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--gold-soft);
+    animation: marqueeSlide 14s linear infinite;
+  }
+  @keyframes marqueeSlide {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+
   .hero-top-bar{
     display:flex; justify-content:space-between; align-items:center;
   }
@@ -94,12 +120,13 @@
     display:flex;
     align-items:center;
     gap:8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
   }
   .hero p.sub{
     margin:0;
-    color:rgba(251,243,228,0.85);
+    color:rgba(251,243,228,0.9);
     font-size:13.5px;
-    max-width:36ch;
+    max-width:38ch;
   }
   .garland{
     display:flex;
@@ -110,7 +137,7 @@
 
   .tabs{
     display:flex;
-    gap:3px;
+    gap:4px;
     margin-top:14px;
     overflow-x:auto;
     padding-bottom:4px;
@@ -133,6 +160,18 @@
     background:var(--gold);
     border-color:var(--gold);
     color:var(--maroon-dark);
+  }
+  /* Highlighted User Guide Tab Button Style */
+  .tab-btn.highlight-guide {
+    background: var(--marigold);
+    border-color: var(--gold-soft);
+    color: #fff;
+    font-weight: 700;
+    box-shadow: 0 0 10px rgba(232,121,45,0.6);
+  }
+  .tab-btn.highlight-guide.active {
+    background: var(--gold);
+    color: var(--maroon-dark);
   }
 
   /* Coupon Tabbed View Styles */
@@ -650,11 +689,16 @@
 <body>
 
 <div class="hero">
+  <!-- Festive Travelling Banner Animation -->
+  <div class="festive-travel-banner">
+    <span class="traveling-text">🪔 🙏 Shubho Sharodotsav! Maa Durga &amp; family are travelling with blessings to celebrate Durga Puja at Magnolia Oxygen! 🪘✨</span>
+  </div>
+
   <div class="hero-top-bar">
-    <div class="hero-eyebrow" id="eyebrowText">Bhog Bela · Food Coupon Booking</div>
+    <div class="hero-eyebrow" id="eyebrowText">Bhog Bela · Magnolia Oxygen Pujo</div>
     <button class="lang-toggle-btn" onclick="toggleLanguage()" id="langBtn">বাংলা</button>
   </div>
-  <h1 id="heroTitle">🪔 Shubho Durga Puja</h1>
+  <h1 id="heroTitle">🪔 Durga Puja Celebration</h1>
   <p class="sub" id="heroSub">Book breakfast, lunch &amp; dinner coupons for all four days of the pujo — choose veg or non-veg, pay by cash or UPI, get a QR coupon per meal.</p>
   <div class="garland">
     <svg viewBox="0 0 400 20" preserveAspectRatio="none">
@@ -667,9 +711,10 @@
     </svg>
   </div>
   <div class="tabs">
-    <button class="tab-btn active" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book</button>
+    <!-- User Guide Tab made first & highlighted -->
+    <button class="tab-btn highlight-guide active" id="tabGuideBtn" onclick="switchTab('guide')">📖 User Guide</button>
+    <button class="tab-btn" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book</button>
     <button class="tab-btn" id="tabFindBtn" onclick="switchTab('find')">🔍 My Coupons</button>
-    <button class="tab-btn" id="tabGuideBtn" onclick="switchTab('guide')">📖 User Guide</button>
     <button class="tab-btn" id="tabServeBtn" onclick="switchTab('serve')">🍽️ Counter</button>
     <button class="tab-btn" id="tabKitchenBtn" onclick="switchTab('kitchen')">👨‍🍳 Kitchen</button>
     <button class="tab-btn" id="tabCommitteeBtn" onclick="switchTab('committee')">🧾 Admin</button>
@@ -678,8 +723,34 @@
 
 <main>
 
+  <!-- ================= USER GUIDE TAB (Default Active) ================= -->
+  <div id="view-guide">
+    <div class="card" id="guideContentArea">
+      <p class="section-label">📖 Bhog Bela Resident User Guide</p>
+      <p style="font-size: 13.5px; color: #8a6a55; margin-bottom: 16px;">
+        Welcome residents of Magnolia Oxygen! Learn how to book food coupons, manage your security PIN, track your QR code delivery status, and add more meals seamlessly.
+      </p>
+
+      <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">1. How to Book Food Coupons</h3>
+      <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
+        <li><strong>Step 1 (Details):</strong> Enter your full name, select your Block and Flat number, and set a secure <strong>4-digit PIN</strong>. <br>⚠️ <em>Remember this PIN! You will need it to view your coupons or add more meals later.</em></li>
+        <li><strong>Step 2 (Choose Meals):</strong> Select your plate quantities across Puja days (Saptami, Ashtami, etc.), choosing between Dine-in or Parcel boxes (+₹15 charge).</li>
+        <li><strong>Step 3 (Review & Pay):</strong> Choose Cash or UPI payment. Complete the transaction or record your 12-digit UTR reference number.</li>
+      </ul>
+
+      <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">2. How to Access "My Coupons" &amp; Book More</h3>
+      <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
+        <li>Go to the <strong>"My Coupons"</strong> tab, enter your Name, Block, Flat, and your 4-digit PIN.</li>
+        <li>View your day-wise meal codes and live delivery tracking (e.g., 0/1 served).</li>
+        <li>Click <strong>"➕ Book More Coupons"</strong> to add more meals without re-entering your details. New bookings automatically merge under your existing Order ID.</li>
+      </ul>
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="downloadUserGuidePDF()">📥 Download User Guide as PDF</button>
+  </div>
+
   <!-- ================= BOOK TAB ================= -->
-  <div id="view-book">
+  <div id="view-book" class="hidden">
 
     <div id="bookForm">
       
@@ -880,32 +951,6 @@
       <button class="btn btn-primary btn-block" onclick="searchMyCoupons()">Search Coupons</button>
     </div>
     <div id="myCouponsResults"></div>
-  </div>
-
-  <!-- ================= USER GUIDE TAB ================= -->
-  <div id="view-guide" class="hidden">
-    <div class="card" id="guideContentArea">
-      <p class="section-label">📖 Bhog Bela Resident User Guide</p>
-      <p style="font-size: 13.5px; color: #8a6a55; margin-bottom: 16px;">
-        Learn how to book food coupons, manage your security PIN, track your QR code delivery status, and add more meals seamlessly.
-      </p>
-
-      <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">1. How to Book Food Coupons</h3>
-      <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
-        <li><strong>Step 1 (Details):</strong> Enter your full name, select your Block and Flat number, and set a secure <strong>4-digit PIN</strong>. <br>⚠️ <em>Remember this PIN! You will need it to view your coupons or add more meals later.</em></li>
-        <li><strong>Step 2 (Choose Meals):</strong> Select your plate quantities across Puja days (Saptami, Ashtami, etc.), choosing between Dine-in or Parcel boxes (+₹15 charge).</li>
-        <li><strong>Step 3 (Review & Pay):</strong> Choose Cash or UPI payment. Complete the transaction or record your 12-digit UTR reference number.</li>
-      </ul>
-
-      <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">2. How to Access "My Coupons" &amp; Book More</h3>
-      <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
-        <li>Go to the <strong>"My Coupons"</strong> tab, enter your Name, Block, Flat, and your 4-digit PIN.</li>
-        <li>View your day-wise meal codes and live delivery tracking (e.g., 0/1 served).</li>
-        <li>Click <strong>"➕ Book More Coupons"</strong> to add more meals without re-entering your details. New bookings automatically merge under your existing Order ID.</li>
-      </ul>
-    </div>
-
-    <button class="btn btn-primary btn-block" onclick="downloadUserGuidePDF()">📥 Download User Guide as PDF</button>
   </div>
 
   <!-- ================= FOOD COUNTER / SERVE TAB ================= -->
@@ -1305,8 +1350,8 @@ const CONFIG = {
 const LANG_DICT = {
   en: {
     langBtn: "বাংলা",
-    eyebrow: "Bhog Bela · Food Coupon Booking",
-    heroTitle: "🪔 Shubho Durga Puja",
+    eyebrow: "Bhog Bela · Magnolia Oxygen Pujo",
+    heroTitle: "🪔 Durga Puja Celebration",
     heroSub: "Book breakfast, lunch & dinner coupons for all four days of the pujo — choose veg or non-veg, pay by cash or UPI, get a QR coupon per meal.",
     step1Title: "Your details",
     step2Title: "Choose your meals",
@@ -1322,8 +1367,8 @@ const LANG_DICT = {
   },
   bn: {
     langBtn: "English",
-    eyebrow: "ভোগ বেলা · ফুড কুপন বুকিং",
-    heroTitle: "🪔 শুভ দুর্গোৎসব ২০২৬",
+    eyebrow: "ভোগ বেলা · ম্যাগনোলিয়া অক্সিজেন পুজো",
+    heroTitle: "🪔 দুর্গোৎসব উদযাপন",
     heroSub: "পুজোর চারদিনের সকালের জলখাবার, দুপুরের মধ্যাহ্নভোজ এবং নৈশভোজের কুপন বুক করুন — নিরামিষ বা আমিষ বেছে নিন, কিউআর কুপন পান।",
     step1Title: "আপনার বিবরণ",
     step2Title: "খাবার নির্বাচন করুন",
