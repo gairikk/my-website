@@ -1034,12 +1034,24 @@
     return false;
   };
 
-  /* STRICT USER REGISTRATION VALIDATION: ONE USER PER FLAT NUMBER */
-  window.dbCheckFlatHasExistingBooking = async function(fullFlatNumber) {
+  /* FLAT RESTRICTION POLICY: Restrict per flat by matching name & flat. Same name + flat can book more; new name for same flat is blocked. */
+  window.dbCheckFlatRegistrationMatch = async function(fullFlatNumber, inputName) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
     const snap = await getDocs(q);
-    return !snap.empty;
+    
+    if (snap.empty) return { allowed: true }; // Flat has no bookings yet
+
+    let existingName = "";
+    snap.forEach(d => {
+      existingName = d.data().name || "";
+    });
+
+    const isSameName = existingName.toLowerCase().trim() === inputName.toLowerCase().trim();
+    return {
+      allowed: isSameName,
+      existingName: existingName
+    };
   };
 
   window.dbBulkUploadSubscriptions = async function(subscriptionRows) {
@@ -1266,9 +1278,9 @@ async function goToStep(stepNumber) {
 
     const fullFlatNumber = `${block}-${flat}`;
     try {
-      const alreadyBooked = await window.dbCheckFlatHasExistingBooking(fullFlatNumber);
-      if (alreadyBooked) {
-        alert(`❌ Registration Restricted: A booking has already been created for Flat ${fullFlatNumber}. Multiple users per flat are prohibited. Please use the "My Coupons" tab to access your existing booking.`);
+      const checkResult = await window.dbCheckFlatRegistrationMatch(fullFlatNumber, name);
+      if (!checkResult.allowed) {
+        alert(`❌ Registration Restricted: Flat ${fullFlatNumber} is already registered under "${checkResult.existingName}". New names cannot book coupons for a flat already registered under another name. Please use "My Coupons" to access your existing booking.`);
         return;
       }
     } catch(e) {
@@ -1480,40 +1492,6 @@ function showToast(message, tone){
   el.className = 'toast show ' + (tone || 'good');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(()=> el.classList.remove('show'), 4200);
-}
-
-/* ================= tabs ================= */
-function switchTab(tab){
-  document.getElementById('view-book').classList.toggle('hidden', tab!=='book');
-  document.getElementById('view-find').classList.toggle('hidden', tab!=='find');
-  document.getElementById('view-serve').classList.toggle('hidden', tab!=='serve');
-  document.getElementById('view-kitchen').classList.toggle('hidden', tab!=='kitchen');
-  document.getElementById('view-committee').classList.toggle('hidden', tab!=='committee');
-  
-  document.getElementById('tabBookBtn').classList.toggle('active', tab==='book');
-  document.getElementById('tabFindBtn').classList.toggle('active', tab==='find');
-  document.getElementById('tabServeBtn').classList.toggle('active', tab==='serve');
-  document.getElementById('tabKitchenBtn').classList.toggle('active', tab==='kitchen');
-  document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
-
-  if(tab!=='serve') stopCamera();
-  if(tab==='kitchen') {
-    const isKitchenUnlocked = !document.getElementById('kitchenPanel').classList.contains('hidden');
-    if(isKitchenUnlocked) renderKitchenDisplay();
-  }
-}
-
-function checkKitchenPin(){
-  const v = document.getElementById('kitchenPinInput').value.trim();
-  const msg = document.getElementById('kitchenPinMsg');
-  if(v === CONFIG.committeePin){
-    document.getElementById('kitchenPinGate').classList.add('hidden');
-    document.getElementById('kitchenPanel').classList.remove('hidden');
-    msg.innerHTML='';
-    renderKitchenDisplay();
-  }else{
-    msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
-  }
 }
 
 /* ================= render day pills + meal rows ================= */
@@ -2149,6 +2127,56 @@ function escapeHtml(s){
   return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+/* ================= DEDICATED FIND MY COUPONS TAB ================= */
+async function searchMyCoupons(){
+  const name = document.getElementById('searchName').value.trim();
+  const block = document.getElementById('searchBlockSelect').value;
+  const flat = document.getElementById('searchFlatSelect').value;
+  const pin = document.getElementById('searchPinInput').value.trim();
+  const results = document.getElementById('myCouponsResults');
+  
+  if(!name || !block || !flat || !/^\d{4}$/.test(pin)){ 
+    results.innerHTML = '<div class="card"><div class="empty">Please enter your Name, select Block &amp; Flat, and enter your 4-digit Security PIN.</div></div>'; 
+    return; 
+  }
+  
+  const fullFlatNumber = `${block}-${flat}`;
+  results.innerHTML = '<div class="card"><div class="empty">Searching…</div></div>';
+  try{
+    const matches = await window.dbGetBookingsByNameAndFlatAndPin(name, fullFlatNumber, pin);
+    if(matches.length===0){ results.innerHTML = '<div class="card"><div class="empty">No matching bookings found. Please check your Name, Flat, and PIN.</div></div>'; return; }
+    matches.sort((a,b)=>b.createdAt-a.createdAt);
+    results.innerHTML='';
+    matches.forEach(b=>{
+      const div = document.createElement('div');
+      div.id = 'mc_'+b.orderId;
+      results.appendChild(div);
+      renderMiniTicketInto(div, b);
+    });
+  }catch(e){
+    results.innerHTML = '<div class="card"><div class="empty">Could not load your coupons right now — please try again.</div></div>';
+  }
+}
+
+function renderMiniTicketInto(container, b){
+  container.className='ticket';
+  container.innerHTML = `
+    <div class="ticket-head">
+      <div style="font-size:11px;letter-spacing:.1em;color:var(--gold-soft);">${CONFIG.eventName}</div>
+      <div class="oid">${b.orderId}</div>
+      <div class="status ${b.paymentStatus}">${statusLabel(b.paymentStatus)}</div>
+    </div>
+    <div class="perf"></div>
+    <div class="ticket-body">
+      <div class="ticket-name">${escapeHtml(b.name)}</div>
+      <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
+      <div class="ticket-pay">${paymentMethodLabel(b)}</div>
+      ${renderBookingMealsHtml(b)}
+      <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
+    </div>`;
+  mountMealQrCodes(b, container);
+}
+
 /* ================= KITCHEN DISPLAY LIVE FEED ================= */
 async function renderKitchenDisplay() {
   const container = document.getElementById('kitchenLiveFeed');
@@ -2314,7 +2342,6 @@ async function saveBooking(b){
   await window.dbSetBooking(b);
 }
 
-/* FIXED QR PAYLOAD PARSER MATCHING SIGNED FORMAT: OrderId|Day|Meal|Type */
 function parseQrPayload(raw){
   const parts = String(raw).split('|');
   if(parts.length>=4){
