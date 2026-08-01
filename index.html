@@ -133,6 +133,31 @@
     color:var(--maroon-dark);
   }
 
+  /* Sub-tabs inside My Coupons for Days / Meals */
+  .coupon-subtabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .coupon-subtab-btn {
+    flex: none;
+    background: #FFF3E8;
+    border: 1.5px solid var(--marigold);
+    color: var(--maroon);
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .coupon-subtab-btn.active {
+    background: var(--marigold);
+    color: #fff;
+    border-color: var(--marigold);
+  }
+
   /* ---------- Progress Stepper Bar ---------- */
   .stepper-bar{
     display:flex;
