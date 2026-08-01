@@ -2136,7 +2136,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   let html = `
     <div class="coupon-day-tabs">
       ${dayKeys.map(dId => `
-        <button class="coupon-day-tab ${dId === activeDayId ? 'active' : ''}" type="button" onclick="window.switchTicketDay('${b.orderId}', '${dId}')">${byDay[dId].label}</button>
+        <button class="coupon-day-tab ${dId === activeDayId ? 'active' : ''}" type="button" onclick="window.switchTicketDay('${b.orderId}', '${dId}', '${containerId}')">${byDay[dId].label}</button>
       `).join('')}
     </div>
     <div class="coupon-meal-tabs">
@@ -2144,7 +2144,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
         const mKey = getMealKey(it);
         const typeStr = it.type === 'veg' ? 'Veg' : 'Non-Veg';
         return `
-          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" type="button" onclick="window.switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}')">${it.mealLabel} (${typeStr})</button>
+          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" type="button" onclick="window.switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})</button>
         `;
       }).join('')}
     </div>
@@ -2176,30 +2176,32 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   mountMealQrCodes(b, container);
 }
 
-/* EXPOSE TAB SWITCHERS GLOBALLY USING CACHED BOOKINGS */
-window.switchTicketDay = function(orderId, dayId) {
+/* EXPOSE TAB SWITCHERS GLOBALLY WITH DYNAMIC CONTAINER TARGETING */
+window.switchTicketDay = function(orderId, dayId, targetContainerId) {
+  const cId = targetContainerId || `ticketTabArea_${orderId}`;
   const b = window.activeBookingCache[orderId];
   if (b) {
-    renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, null);
+    renderTabbedTicketContent(b, cId, dayId, null);
   } else {
     fetchBooking(orderId).then(booking => {
       if(booking) {
         window.activeBookingCache[orderId] = booking;
-        renderTabbedTicketContent(booking, `ticketTabArea_${orderId}`, dayId, null);
+        renderTabbedTicketContent(booking, cId, dayId, null);
       }
     });
   }
 };
 
-window.switchTicketMeal = function(orderId, dayId, mealKey) {
+window.switchTicketMeal = function(orderId, dayId, mealKey, targetContainerId) {
+  const cId = targetContainerId || `ticketTabArea_${orderId}`;
   const b = window.activeBookingCache[orderId];
   if (b) {
-    renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, mealKey);
+    renderTabbedTicketContent(b, cId, dayId, mealKey);
   } else {
     fetchBooking(orderId).then(booking => {
       if(booking) {
         window.activeBookingCache[orderId] = booking;
-        renderTabbedTicketContent(booking, `ticketTabArea_${orderId}`, dayId, mealKey);
+        renderTabbedTicketContent(booking, cId, dayId, mealKey);
       }
     });
   }
