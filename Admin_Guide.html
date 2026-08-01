@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bhog Bela — Admin, Volunteer & Kitchen Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #7A1220;
+    --maroon-dark: #4A0A12;
+    --gold: #C89B3C;
+    --ivory: #FBF3E4;
+    --ink: #2B0F0F;
+    --line: rgba(43,15,15,0.12);
+    --radius: 16px;
+  }
+  *{box-sizing:border-box;}
+  body {
+    background: var(--ivory);
+    color: var(--ink);
+    font-family: 'Hind Siliguri', sans-serif;
+    margin: 0;
+    padding: 24px 16px;
+    line-height: 1.5;
+  }
+  .container { max-width: 700px; margin: 0 auto; }
+  h1, h2 { font-family: 'Baloo 2', cursive; color: var(--maroon-dark); }
+  h1 { text-align: center; font-size: 30px; margin-bottom: 6px; }
+  .subtitle { text-align: center; color: #8a6a55; font-size: 14.5px; margin-bottom: 24px; }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(43,15,15,0.04);
+  }
+  .guide-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--maroon);
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 8px;
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+  .step-list { padding-left: 20px; margin: 0 0 16px; }
+  .step-list li { margin-bottom: 10px; }
+  .note {
+    background: #FFFDF9;
+    border-left: 4px solid var(--gold);
+    padding: 10px 14px;
+    font-size: 13.5px;
+    color: #6b4a3a;
+    margin-top: 12px;
+    border-radius: 0 8px 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🛡️ Bhog Bela — Operations Manual</h1>
+  <p class="subtitle">Guide for Committee Admins, Counter Volunteers, and Kitchen Staff.</p>
+
+  <div class="card">
+    <h2 class="guide-title">1. Committee Admin &amp; Payment Verification (`🧾 Admin` Tab)</h2>
+    <ol class="step-list">
+      <li><strong>Access with PIN:</strong> Enter the committee security PIN to unlock the admin panel.</li>
+      <li><strong>Bulk Subscription Upload:</strong> Upload your society's `paid_flats.csv` file using the upload box to automatically sync annual festival subscription clearance statuses into Firestore.</li>
+      <li><strong>Verify Pending Payments (Payment Bifurcation):</strong> Scroll down to <em>Pending Payment Verifications</em> and review orders. When residents book more coupons, the review screen splits the verification clearly:
+        <ul>
+          <li><strong>Total Amount</strong> = Aggregated amount of all bookings combined.</li>
+          <li><strong>Already Paid</strong> = Amount paid/verified for earlier bookings.</li>
+          <li><strong>New Booking Amount</strong> = Amount to be verified now (paid in cash or via UPI to be verified via URN).</li>
+        </ul>
+        Cross-check the URN/Cash receipt and click <strong>"Mark Payment Verified"</strong> to unlock new QR codes.
+      </li>
+      <li><strong>Export Reports:</strong> Download the Master Master Report CSV or the Kitchen Prep Forecast CSV for cooks at any time.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2 class="guide-title">2. Counter Volunteers / Food Service (`🍽️ Counter` Tab)</h2>
+    <ol class="step-list">
+      <li><strong>Unlock Counter:</strong> Enter the volunteer access PIN.</li>
+      <li><strong>Scan Resident QR Codes:</strong> Click <strong>"Start Camera Scanner"</strong>. Point your phone's camera at the resident's meal QR code. The app automatically validates the cryptographic HMAC signature, prevents duplicate scans for already-served plates, plays a confirmation beep, and logs the meal delivery live.</li>
+      <li><strong>Manual Lookup:</strong> Alternatively, type the resident's Order ID, Name, or Flat number in the search bar, review their precise Dine-in vs. Parcel plate breakdown, and tap <strong>"Serve 1 Meal"</strong>.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2 class="guide-title">3. Kitchen Staff Real-Time Feed (`👨‍🍳 Kitchen` Tab)</h2>
+    <ol class="step-list">
+      <li><strong>Access Live Feed:</strong> Enter the volunteer/kitchen PIN.</li>
+      <li><strong>Live Preparation Dashboard:</strong> View real-time aggregated counts of verified plates to cook and parcel boxes to pack for each active meal slot (Veg vs. Non-Veg counters vs. parcel boxes). Tap <strong>"Refresh Kitchen Feed"</strong> to update numbers instantly as payments get verified by admins.</li>
+    </ol>
+  </div>
+
+</div>
+
+</body>
+</html>

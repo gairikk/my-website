@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bhog Bela — Resident User Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --maroon: #7A1220;
+    --maroon-dark: #4A0A12;
+    --gold: #C89B3C;
+    --ivory: #FBF3E4;
+    --ink: #2B0F0F;
+    --line: rgba(43,15,15,0.12);
+    --radius: 16px;
+  }
+  *{box-sizing:border-box;}
+  body {
+    background: var(--ivory);
+    color: var(--ink);
+    font-family: 'Hind Siliguri', sans-serif;
+    margin: 0;
+    padding: 24px 16px;
+    line-height: 1.5;
+  }
+  .container { max-width: 700px; margin: 0 auto; }
+  h1, h2 { font-family: 'Baloo 2', cursive; color: var(--maroon-dark); }
+  h1 { text-align: center; font-size: 30px; margin-bottom: 6px; }
+  .subtitle { text-align: center; color: #8a6a55; font-size: 14.5px; margin-bottom: 24px; }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(43,15,15,0.04);
+  }
+  .guide-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--maroon);
+    border-bottom: 2px solid var(--line);
+    padding-bottom: 8px;
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+  .step-list { padding-left: 20px; margin: 0 0 16px; }
+  .step-list li { margin-bottom: 10px; }
+  .note {
+    background: #FFFDF9;
+    border-left: 4px solid var(--gold);
+    padding: 10px 14px;
+    font-size: 13.5px;
+    color: #6b4a3a;
+    margin-top: 12px;
+    border-radius: 0 8px 8px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>🎟️ Bhog Bela — Resident User Manual</h1>
+  <p class="subtitle">Guide for Booking Food Coupons, Accessing My Coupons, and Adding More Meals.</p>
+
+  <div class="card">
+    <h2 class="guide-title">1. How to Book Food Coupons</h2>
+    <ol class="step-list">
+      <li><strong>Open the App &amp; Go to "Book" Tab:</strong> Start at the main booking interface.</li>
+      <li><strong>Enter Details &amp; PIN (Step 1):</strong> Type your full name, choose your Block and Flat number. Set a secure <strong>4-digit PIN</strong>.<br>⚠️ <em>Important PIN Disclaimer: Remember this 4-digit PIN! You will need to enter this exact PIN in the "My Coupons" tab to view, access, or add more coupons later. Do not forget it.</em> Check the data privacy agreement box and click Next.</li>
+      <li><strong>Select Meals (Step 2):</strong> Navigate through the Puja days (Saptami, Ashtami, etc.). Choose plate quantities for Breakfast, Lunch, or Dinner, choosing Veg/Non-Veg options and Dine-in vs. Parcel boxes (+₹15 charge). Click Next.</li>
+      <li><strong>Review &amp; Pay (Step 3):</strong> Check your order summary. Select either <strong>Cash</strong> (pay at desk) or <strong>UPI</strong> (scan QR or pay via app and enter your 12-digit UTR reference number).</li>
+      <li><strong>Get Your QR Tickets:</strong> Confirm your booking. Your digital tickets with per-meal QR codes will generate instantly.</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2 class="guide-title">2. How to Access "My Coupons" &amp; Book More Meals</h2>
+    <ol class="step-list">
+      <li><strong>Switch to "My Coupons" Tab:</strong> Click the lookup tab at the top of the app.</li>
+      <li><strong>Enter Credentials:</strong> Enter your exact Full Name, Block, Flat Number, and your <strong>4-digit Security PIN</strong> (the one you used during booking). <em>In case of any issues with your PIN, please contact the Puja Committee Admin.</em> Click <em>Search Coupons</em>.</li>
+      <li><strong>View by Day &amp; Meal Tabs:</strong> Your booked meals appear organized by day tabs and meal buttons (Breakfast, Lunch, Dinner). Each meal card displays its specific QR code, plate breakdown (Dine-in vs Parcel), and real-time delivery status.</li>
+      <li><strong>Book More Coupons:</strong> Tap the <strong>"➕ Book More Coupons"</strong> button inside your ticket view or lookup result. This pre-fills your flat credentials and redirects you straight to Step 2 to add more meals without re-entering your details. Any new booking will merge under your existing Order ID.</li>
+    </ol>
+    <div class="note">
+      💡 <strong>Payment Verification Note:</strong> If you paid via UPI or Cash, your QR codes will show as locked (⏳ Payment Pending) until an admin verifies the payment. Once verified, your QR codes unlock automatically.
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
