@@ -1296,6 +1296,9 @@ let isSubscriptionPaid = false;
 let currentStep = 1;
 let selectedCsvFile = null;
 
+/* STORE MAPPED CACHE OF SEARCHED BOOKINGS FOR TAB SWITCHING */
+let activeSearchedBookings = {};
+
 /* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR & VERIFIER FIX */
 async function generateHMACSignature(dataStr) {
   const enc = new TextEncoder();
@@ -2112,8 +2115,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   }
 
   const currentDayItems = byDay[activeDayId].items;
-  
-  // Unique identifier key combining meal ID and type (e.g. "breakfast_veg" or "lunch_nonveg")
   const getMealKey = (it) => `${it.meal}_${it.type}`;
 
   if (!activeMealKey || !currentDayItems.some(i => getMealKey(i) === activeMealKey)) {
@@ -2123,7 +2124,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   let html = `
     <div class="coupon-day-tabs">
       ${dayKeys.map(dId => `
-        <button class="coupon-day-tab ${dId === activeDayId ? 'active' : ''}" onclick="switchTicketDay('${b.orderId}', '${dId}')">${byDay[dId].label}</button>
+        <button class="coupon-day-tab ${dId === activeDayId ? 'active' : ''}" type="button" onclick="window.switchTicketDay('${b.orderId}', '${dId}')">${byDay[dId].label}</button>
       `).join('')}
     </div>
     <div class="coupon-meal-tabs">
@@ -2131,7 +2132,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
         const mKey = getMealKey(it);
         const typeStr = it.type === 'veg' ? 'Veg' : 'Non-Veg';
         return `
-          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" onclick="switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}')">${it.mealLabel} (${typeStr})</button>
+          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" type="button" onclick="window.switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}')">${it.mealLabel} (${typeStr})</button>
         `;
       }).join('')}
     </div>
@@ -2163,6 +2164,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   mountMealQrCodes(b, container);
 }
 
+/* EXPOSE TAB SWITCHERS GLOBALLY */
 window.switchTicketDay = function(orderId, dayId) {
   fetchBooking(orderId).then(b => {
     if(b) renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, null);
