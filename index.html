@@ -1039,7 +1039,7 @@
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
     const snap = await getDocs(q);
-    return !snap.empty; // Returns true if a booking already exists for this flat
+    return !snap.empty;
   };
 
   window.dbBulkUploadSubscriptions = async function(subscriptionRows) {
@@ -1180,7 +1180,6 @@ const LANG_DICT = {
     setPin: "Set 4-Digit Security PIN (to lock & access your coupons)",
     pinHelp: "Remember this PIN. It prevents others from accessing your flat's coupons.",
     privacyTerms: "I accept the Data Privacy Terms & Conditions.",
-    findCouponsBtn: "Already booked? Find my coupons →",
     totalPayable: "Total payable",
     howPay: "How will you pay?"
   },
@@ -1198,7 +1197,6 @@ const LANG_DICT = {
     setPin: "৪-সংখ্যার পিন (PIN) সেট করুন",
     pinHelp: "এই পিনটি মনে রাখুন। এটি আপনার কুপনের সুরক্ষা নিশ্চিত করবে।",
     privacyTerms: "আমি গোপনীয়তা নীতি ও শর্তাবলী মেনে নিচ্ছি।",
-    findCouponsBtn: "ইতিমধ্যে বুক করেছেন? কুপন খুঁজুন →",
     totalPayable: "মোট প্রদেয় অর্থ",
     howPay: "পেমেন্ট কীভাবে করবেন?"
   }
@@ -1238,7 +1236,7 @@ let isSubscriptionPaid = false;
 let currentStep = 1;
 let selectedCsvFile = null;
 
-/* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR */
+/* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR & VERIFIER FIX */
 async function generateHMACSignature(dataStr) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -1266,12 +1264,11 @@ async function goToStep(stepNumber) {
     if (!/^\d{4}$/.test(userPin)) { alert('Please enter a 4-digit PIN.'); return; }
     if (!terms) { alert('Please accept the Data Privacy Terms & Conditions.'); return; }
 
-    // VALIDATION: Check if a user/booking already exists for this exact flat number
     const fullFlatNumber = `${block}-${flat}`;
     try {
       const alreadyBooked = await window.dbCheckFlatHasExistingBooking(fullFlatNumber);
       if (alreadyBooked) {
-        alert(`❌ Registration Restricted: A booking has already been created for Flat ${fullFlatNumber}. Multiple users per flat are prohibited. Please use "My Coupons" to access your existing booking.`);
+        alert(`❌ Registration Restricted: A booking has already been created for Flat ${fullFlatNumber}. Multiple users per flat are prohibited. Please use the "My Coupons" tab to access your existing booking.`);
         return;
       }
     } catch(e) {
@@ -1964,7 +1961,7 @@ async function confirmBooking(){
   }
 }
 
-/* ================= TICKET RENDERING (HMAC SECURED QR) ================= */
+/* ================= TICKET RENDERING & HMAC QR FIX ================= */
 function statusLabel(status){
   if(status==='verified') return '✓ Payment verified';
   if(status==='complimentary') return '🎁 Complimentary — no payment required';
@@ -1977,7 +1974,7 @@ function paymentMethodLabel(b){
 }
 
 async function mealQrPayloadHMAC(b, it){
-  const rawPayload = `${b.orderId}|${it.day}|${it.meal}|${it.type}|${b.name}`;
+  const rawPayload = `${b.orderId}|${it.day}|${it.meal}|${it.type}`;
   const hmac = await generateHMACSignature(rawPayload);
   return `${rawPayload}|${hmac}`;
 }
@@ -2152,56 +2149,6 @@ function escapeHtml(s){
   return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-/* ================= DEDICATED FIND MY COUPONS TAB ================= */
-async function searchMyCoupons(){
-  const name = document.getElementById('searchName').value.trim();
-  const block = document.getElementById('searchBlockSelect').value;
-  const flat = document.getElementById('searchFlatSelect').value;
-  const pin = document.getElementById('searchPinInput').value.trim();
-  const results = document.getElementById('myCouponsResults');
-  
-  if(!name || !block || !flat || !/^\d{4}$/.test(pin)){ 
-    results.innerHTML = '<div class="card"><div class="empty">Please enter your Name, select Block &amp; Flat, and enter your 4-digit Security PIN.</div></div>'; 
-    return; 
-  }
-  
-  const fullFlatNumber = `${block}-${flat}`;
-  results.innerHTML = '<div class="card"><div class="empty">Searching…</div></div>';
-  try{
-    const matches = await window.dbGetBookingsByNameAndFlatAndPin(name, fullFlatNumber, pin);
-    if(matches.length===0){ results.innerHTML = '<div class="card"><div class="empty">No matching bookings found. Please check your Name, Flat, and PIN.</div></div>'; return; }
-    matches.sort((a,b)=>b.createdAt-a.createdAt);
-    results.innerHTML='';
-    matches.forEach(b=>{
-      const div = document.createElement('div');
-      div.id = 'mc_'+b.orderId;
-      results.appendChild(div);
-      renderMiniTicketInto(div, b);
-    });
-  }catch(e){
-    results.innerHTML = '<div class="card"><div class="empty">Could not load your coupons right now — please try again.</div></div>';
-  }
-}
-
-function renderMiniTicketInto(container, b){
-  container.className='ticket';
-  container.innerHTML = `
-    <div class="ticket-head">
-      <div style="font-size:11px;letter-spacing:.1em;color:var(--gold-soft);">${CONFIG.eventName}</div>
-      <div class="oid">${b.orderId}</div>
-      <div class="status ${b.paymentStatus}">${statusLabel(b.paymentStatus)}</div>
-    </div>
-    <div class="perf"></div>
-    <div class="ticket-body">
-      <div class="ticket-name">${escapeHtml(b.name)}</div>
-      <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
-      <div class="ticket-pay">${paymentMethodLabel(b)}</div>
-      ${renderBookingMealsHtml(b)}
-      <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
-    </div>`;
-  mountMealQrCodes(b, container);
-}
-
 /* ================= KITCHEN DISPLAY LIVE FEED ================= */
 async function renderKitchenDisplay() {
   const container = document.getElementById('kitchenLiveFeed');
@@ -2367,15 +2314,13 @@ async function saveBooking(b){
   await window.dbSetBooking(b);
 }
 
+/* FIXED QR PAYLOAD PARSER MATCHING SIGNED FORMAT: OrderId|Day|Meal|Type */
 function parseQrPayload(raw){
   const parts = String(raw).split('|');
-  // Fixed QR payload parser supporting OrderId|Day|Meal|Type|Name|HMAC
-  if(parts.length>=5){
-    return { orderId: parts[0], day: parts[1], meal: parts[2], type: parts[3], name: parts[4] || null, hmac: parts[5] || null };
-  } else if(parts.length>=4){
-    return { orderId: parts[0], day: parts[1], meal: parts[2], type: parts[3], name: null, hmac: parts[4] || null };
+  if(parts.length>=4){
+    return { orderId: parts[0], day: parts[1], meal: parts[2], type: parts[3], hmac: parts[4] || null };
   }
-  return { orderId: raw, day:null, meal:null, type:null, name:null, hmac:null };
+  return { orderId: raw, day:null, meal:null, type:null, hmac:null };
 }
 
 function doLookupDirect(inputId) {
