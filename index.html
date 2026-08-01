@@ -1084,7 +1084,7 @@
     return false;
   };
 
-  /* ROBUST SINGLE ORDER MERGING: Finds existing active booking for flat + name to append new meals under the same Order ID */
+  /* MERGE BOOKINGS UNDER THE SAME FLAT NUMBER & NAME (1 Order ID per resident) */
   window.dbGetOrCreateActiveBooking = async function(fullFlatNumber, name, pin) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
@@ -1093,7 +1093,7 @@
     let existingBooking = null;
     snap.forEach(d => {
       const data = d.data();
-      if (data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim() && data.userPin === pin.trim()) {
+      if (data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim()) {
         existingBooking = data;
       }
     });
@@ -2010,11 +2010,10 @@ async function confirmBooking(){
 
     if (existingActive && existingActive.booking) {
       booking = existingActive.booking;
-      // Merge new items into existing order ID
       booking.items = booking.items.concat(newItems);
       booking.total += total;
       
-      // If there is a new payment due, set status back to pending so admin must approve/verify the additional payment
+      // CRITICAL FIX: Explicitly set status to pending and update UTR/payment method so admin panel lists it for verification approval!
       if (total > 0) {
         booking.paymentStatus = 'pending';
         booking.paymentMethod = paymentMethod;
@@ -2060,7 +2059,7 @@ async function confirmBooking(){
   }
 }
 
-/* ================= TICKET RENDERING & HMAC QR FIX ================= */
+/* ================= TICKET RENDERING & REFRESH FLOW ================= */
 function statusLabel(status){
   if(status==='verified') return '✓ Payment verified';
   if(status==='complimentary') return '🎁 Complimentary — no payment required';
@@ -2125,7 +2124,7 @@ function renderTicket(b){
     <div class="note">Each meal variant has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
     <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
-    <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">Book More Coupons</button>
+    <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
   `;
   renderTabbedTicketContent(b, `ticketTabArea_${b.orderId}`);
@@ -2200,7 +2199,39 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   mountMealQrCodes(b, container);
 }
 
-/* EXPOSE TAB SWITCHERS GLOBALLY WITH DYNAMIC CONTAINER TARGETING */
+/* BOOK MORE COUPONS FLOW: Skips step 1, pre-fills context, redirects directly to Step 2 */
+function bookMoreCoupons(name, flatNumber, pin) {
+  if (ticketUnsubscribe) ticketUnsubscribe();
+  cart = {};
+  
+  const [block, flat] = flatNumber.split('-');
+  document.getElementById('userName').value = name;
+  document.getElementById('userPin').value = pin;
+  document.getElementById('blockSelect').value = block || '';
+  
+  const flatSelect = document.getElementById('flatSelect');
+  if (block) {
+    flatSelect.innerHTML = generateFlatOptions(block);
+    flatSelect.value = flat || '';
+    flatSelect.disabled = false;
+  }
+
+  isSubscriptionPaid = true; // Already verified during initial booking
+  document.getElementById('subStatusMsg').innerHTML = '<div class="msg ok" style="margin-top:6px; font-weight:600;">✓ Existing subscription &amp; flat credentials verified.</div>';
+  document.getElementById('privacyTermsConfirm').checked = true;
+
+  document.getElementById('ticketView').classList.add('hidden');
+  document.getElementById('bookForm').style.display = 'block';
+
+  activeDay = CONFIG.days[0].id;
+  renderDayPills();
+  renderMealRows();
+  updateTotals();
+
+  // Jump directly to Step 2 (Choose Meals)
+  goToStep(2);
+}
+
 window.switchTicketDay = function(orderId, dayId, targetContainerId) {
   const cId = targetContainerId || `ticketTabArea_${orderId}`;
   const b = window.activeBookingCache[orderId];
@@ -2361,6 +2392,7 @@ function renderMiniTicketInto(container, b){
       <div id="miniTabArea_${b.orderId}"></div>
 
       <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
+      <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     </div>`;
   renderTabbedTicketContent(b, `miniTabArea_${b.orderId}`);
   mountMealQrCodes(b, container);
