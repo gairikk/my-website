@@ -731,7 +731,9 @@
         <div class="field" style="margin-top:12px;">
           <label for="userPin" id="lblSetPin">Set 4-Digit Security PIN (to lock &amp; access your coupons)</label>
           <input type="password" id="userPin" placeholder="e.g. 1234" maxlength="4" autocomplete="off" oninput="validateStep1()">
-          <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;" id="lblPinHelp">Remember this PIN. It prevents others from accessing your flat's coupons.</div>
+          <div style="font-size:11.5px; color:#8a6a55; margin-top:2px;" id="lblPinHelp">
+            ⚠️ <strong>Important PIN Disclaimer:</strong> Remember this 4-digit PIN! You will need to enter this exact PIN in the <strong>"My Coupons"</strong> tab to view, access, or add more coupons later. Do not forget it.
+          </div>
         </div>
 
         <!-- Privacy Advisory in Step 1 -->
@@ -835,6 +837,12 @@
   <div id="view-find" class="hidden">
     <div class="card">
       <p class="section-label">🔒 Find my coupons (PIN Protected)</p>
+      
+      <!-- Disclaimer for PIN in My Coupons tab -->
+      <div class="note alert" style="margin-top:0; margin-bottom:12px; background:#FFF3E8; border-color:var(--marigold);">
+        ℹ️ Please use the exact <strong>4-digit PIN</strong> that you used while booking your coupons. In case of any issues with your PIN, please contact the Puja Committee Admin.
+      </div>
+
       <div class="field">
         <label for="searchName">Full Name</label>
         <input type="text" id="searchName" placeholder="Enter full name">
@@ -2100,10 +2108,10 @@ async function confirmBooking(){
     if(ticketUnsubscribe) ticketUnsubscribe();
     ticketUnsubscribe = window.dbListenToBooking(booking.orderId, (updatedBooking) => {
       window.activeBookingCache[booking.orderId] = updatedBooking;
-      renderTicket(updatedBooking, true);
+      renderTicket(updatedBooking, false);
     });
 
-    renderTicket(booking, true);
+    renderTicket(booking, false);
     document.getElementById('bookForm').style.display = 'none';
     document.getElementById('ticketView').classList.remove('hidden');
     window.scrollTo({top:0, behavior:'smooth'});
@@ -2245,7 +2253,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     const dineInCount = (selectedItem.qty || 0) - parcelCount;
     let packagingTags = parcelCount > 0 ? `<span class="tag parcel">📦 ${parcelCount} Parcel</span>` : `<span class="tag dinein">🍽️ Dine-in</span>`;
 
-    // Refined breakdown box showing exact Dine-in vs Parcel counts if qty > 1
     let breakdownBox = '';
     if (selectedItem.qty > 1 || parcelCount > 0) {
       breakdownBox = `
@@ -3124,7 +3131,7 @@ function scanLoop(){
         stopCamera();
         window.scrollTo({top:0, behavior:'smooth'});
         if(payload.day && payload.meal && payload.type){
-          handleMealScan(payload.orderId, payload.day, payload.meal, payload.type, payload.hmac);
+          handleMealScan(payload.orderId, payload.day, payload.meal, payload.type, payload.mac);
         } else {
           document.getElementById('serveLookupInput').value = payload.orderId;
           doLookupDirect('serveLookupInput');
