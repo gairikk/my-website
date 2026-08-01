@@ -1,5 +1,7 @@
-# my-website
+# Project Overview
+
 Food Coupon Distribution
+
 # 🪔 Bhog Bela — Durga Puja Food Coupon Management System
 
 Bhog Bela is a progressive web application built for housing societies and puja committees to manage, book, verify, and distribute food coupons during Durga Puja. It features real-time Firebase synchronization, cryptographic HMAC-secured QR codes for meal tracking, live kitchen dashboards, and detailed admin analytics.
@@ -24,7 +26,7 @@ Bhog Bela is a progressive web application built for housing societies and puja 
 
 * **Frontend:** Vanilla JavaScript (ES6+), HTML5, CSS3 (Responsive mobile-first layout)
 * **Backend / Database:** Firebase Firestore (Real-time synchronization)
-* **Libraries & Utilities:** 
+* **Libraries & Utilities:**
   * `qrcode.js` for dynamic QR code generation
   * `jsQR` for camera-based QR code scanning
   * `html2canvas` for downloading digital meal tickets as high-res PNG images
@@ -43,6 +45,7 @@ Bhog Bela is a progressive web application built for housing societies and puja 
 ## 👥 User Guides & Manuals
 
 For detailed step-by-step instructions on how to use the platform, please refer to the standalone guide files:
+
 * [Resident User Guide (`user_guide.html`)](./user_guide.html) — Manual for booking coupons, logging into "My Coupons", and adding more meals.
 * [Admin & Volunteer Guide (`admin_guide.html`)](./admin_guide.html) — Manual for committee payment verification, counter QR scanning, and kitchen preparation feeds.
 

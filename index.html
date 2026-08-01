@@ -10,6 +10,8 @@
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/jsqr@1.4.0/dist/jsQR.js';"></script>
 <!-- html2canvas for downloading ticket as PNG -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<!-- html2pdf for downloading user guide PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <!-- PapaParse for parsing CSV files in browser -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
@@ -182,7 +184,7 @@
     border-color: var(--maroon);
   }
 
-  /* Refined Breakdown Box inside QR ticket card (Universal for all meals) */
+  /* Refined Breakdown Box inside QR ticket card */
   .plate-breakdown-box {
     display: flex;
     justify-content: space-around;
@@ -667,6 +669,7 @@
   <div class="tabs">
     <button class="tab-btn active" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book</button>
     <button class="tab-btn" id="tabFindBtn" onclick="switchTab('find')">🔍 My Coupons</button>
+    <button class="tab-btn" id="tabGuideBtn" onclick="switchTab('guide')">📖 User Guide</button>
     <button class="tab-btn" id="tabServeBtn" onclick="switchTab('serve')">🍽️ Counter</button>
     <button class="tab-btn" id="tabKitchenBtn" onclick="switchTab('kitchen')">👨‍🍳 Kitchen</button>
     <button class="tab-btn" id="tabCommitteeBtn" onclick="switchTab('committee')">🧾 Admin</button>
@@ -877,6 +880,32 @@
       <button class="btn btn-primary btn-block" onclick="searchMyCoupons()">Search Coupons</button>
     </div>
     <div id="myCouponsResults"></div>
+  </div>
+
+  <!-- ================= USER GUIDE TAB ================= -->
+  <div id="view-guide" class="hidden">
+    <div class="card" id="guideContentArea">
+      <p class="section-label">📖 Bhog Bela Resident User Guide</p>
+      <p style="font-size: 13.5px; color: #8a6a55; margin-bottom: 16px;">
+        Learn how to book food coupons, manage your security PIN, track your QR code delivery status, and add more meals seamlessly.
+      </p>
+
+      <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">1. How to Book Food Coupons</h3>
+      <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
+        <li><strong>Step 1 (Details):</strong> Enter your full name, select your Block and Flat number, and set a secure <strong>4-digit PIN</strong>. <br>⚠️ <em>Remember this PIN! You will need it to view your coupons or add more meals later.</em></li>
+        <li><strong>Step 2 (Choose Meals):</strong> Select your plate quantities across Puja days (Saptami, Ashtami, etc.), choosing between Dine-in or Parcel boxes (+₹15 charge).</li>
+        <li><strong>Step 3 (Review & Pay):</strong> Choose Cash or UPI payment. Complete the transaction or record your 12-digit UTR reference number.</li>
+      </ul>
+
+      <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">2. How to Access "My Coupons" &amp; Book More</h3>
+      <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
+        <li>Go to the <strong>"My Coupons"</strong> tab, enter your Name, Block, Flat, and your 4-digit PIN.</li>
+        <li>View your day-wise meal codes and live delivery tracking (e.g., 0/1 served).</li>
+        <li>Click <strong>"➕ Book More Coupons"</strong> to add more meals without re-entering your details. New bookings automatically merge under your existing Order ID.</li>
+      </ul>
+    </div>
+
+    <button class="btn btn-primary btn-block" onclick="downloadUserGuidePDF()">📥 Download User Guide as PDF</button>
   </div>
 
   <!-- ================= FOOD COUNTER / SERVE TAB ================= -->
@@ -1596,12 +1625,14 @@ function showToast(message, tone){
 function switchTab(tab){
   document.getElementById('view-book').classList.toggle('hidden', tab!=='book');
   document.getElementById('view-find').classList.toggle('hidden', tab!=='find');
+  document.getElementById('view-guide').classList.toggle('hidden', tab!=='guide');
   document.getElementById('view-serve').classList.toggle('hidden', tab!=='serve');
   document.getElementById('view-kitchen').classList.toggle('hidden', tab!=='kitchen');
   document.getElementById('view-committee').classList.toggle('hidden', tab!=='committee');
   
   document.getElementById('tabBookBtn').classList.toggle('active', tab==='book');
   document.getElementById('tabFindBtn').classList.toggle('active', tab==='find');
+  document.getElementById('tabGuideBtn').classList.toggle('active', tab==='guide');
   document.getElementById('tabServeBtn').classList.toggle('active', tab==='serve');
   document.getElementById('tabKitchenBtn').classList.toggle('active', tab==='kitchen');
   document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
@@ -2349,6 +2380,21 @@ function downloadTicketImage(orderId) {
   });
 }
 
+/* DOWNLOAD USER GUIDE PDF */
+function downloadUserGuidePDF() {
+  const element = document.getElementById('guideContentArea');
+  const options = {
+    margin:       10,
+    filename:     'bhog_bela_user_guide.pdf',
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+  
+  showToast('Generating Guide PDF...', 'good');
+  html2pdf().from(element).set(options).save();
+}
+
 async function deleteUserBooking(orderId) {
   if(!confirm('Are you sure you want to delete this booking and remove your personal data? This action cannot be undone.')) return;
   try {
@@ -2737,7 +2783,6 @@ function paintLookupCard(b, isFromFoodCounter = false){
   const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
   const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
 
-  // Admin Bifurcation Fix: Aggregated total = already paid + new booking amount
   const aggregatedTotal = b.total || 0;
   const newBookingAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : (b.paymentStatus === 'pending' ? aggregatedTotal : 0);
   const alreadyPaidAmt = aggregatedTotal - newBookingAmt;
