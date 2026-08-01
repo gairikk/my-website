@@ -808,7 +808,7 @@
     <div id="ticketView" class="hidden"></div>
   </div>
 
-  <!-- ================= DEDICATED FIND MY COUPONS TAB (WITH DAY & MEAL TABS) ================= -->
+  <!-- ================= DEDICATED FIND MY COUPONS TAB ================= -->
   <div id="view-find" class="hidden">
     <div class="card">
       <p class="section-label">🔒 Find my coupons (PIN Protected)</p>
@@ -1083,7 +1083,6 @@
     return false;
   };
 
-  /* FLAT RESTRICTION POLICY: Same name + flat can book more; new name for same flat is blocked. */
   window.dbCheckFlatRegistrationMatch = async function(fullFlatNumber, inputName) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
@@ -2094,7 +2093,7 @@ function renderTicket(b){
   mountMealQrCodes(b, document);
 }
 
-function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMealId = null) {
+function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMealKey = null) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
@@ -2113,8 +2112,12 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   }
 
   const currentDayItems = byDay[activeDayId].items;
-  if (!activeMealId || !currentDayItems.some(i => i.meal === activeMealId)) {
-    activeMealId = currentDayItems[0].meal;
+  
+  // Unique identifier key combining meal ID and type (e.g. "breakfast_veg" or "lunch_nonveg")
+  const getMealKey = (it) => `${it.meal}_${it.type}`;
+
+  if (!activeMealKey || !currentDayItems.some(i => getMealKey(i) === activeMealKey)) {
+    activeMealKey = getMealKey(currentDayItems[0]);
   }
 
   let html = `
@@ -2124,13 +2127,17 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
       `).join('')}
     </div>
     <div class="coupon-meal-tabs">
-      ${currentDayItems.map(it => `
-        <button class="coupon-meal-tab ${it.meal === activeMealId ? 'active' : ''}" onclick="switchTicketMeal('${b.orderId}', '${activeDayId}', '${it.meal}')">${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'})</button>
-      `).join('')}
+      ${currentDayItems.map(it => {
+        const mKey = getMealKey(it);
+        const typeStr = it.type === 'veg' ? 'Veg' : 'Non-Veg';
+        return `
+          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" onclick="switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}')">${it.mealLabel} (${typeStr})</button>
+        `;
+      }).join('')}
     </div>
   `;
 
-  const selectedItem = currentDayItems.find(it => it.meal === activeMealId);
+  const selectedItem = currentDayItems.find(it => getMealKey(it) === activeMealKey);
   if (selectedItem) {
     const typeTag = selectedItem.type ? `<span class="tag ${selectedItem.type==='veg'?'veg':'nonveg'}">${selectedItem.type==='veg'?'Veg':'Non-veg'}</span>` : '';
     const freeTag = selectedItem.complimentary ? `<span class="tag free">FREE</span>` : '';
@@ -2162,9 +2169,9 @@ window.switchTicketDay = function(orderId, dayId) {
   });
 };
 
-window.switchTicketMeal = function(orderId, dayId, mealId) {
+window.switchTicketMeal = function(orderId, dayId, mealKey) {
   fetchBooking(orderId).then(b => {
-    if(b) renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, mealId);
+    if(b) renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, mealKey);
   });
 };
 
