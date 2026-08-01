@@ -1306,7 +1306,6 @@ let isSubscriptionPaid = false;
 let currentStep = 1;
 let selectedCsvFile = null;
 
-/* GLOBAL ACTIVE BOOKING CACHE FOR TAB SWITCHING */
 window.activeBookingCache = {};
 
 /* LIGHTWEIGHT HMAC QR PAYLOAD GENERATOR & VERIFIER FIX */
@@ -2119,11 +2118,11 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     byDay[it.day].items.push(it);
   });
 
-  const dayKeys = Object.keys(byDay);
-  if (dayKeys.length === 0) return;
+  const bookedDayKeys = Object.keys(byDay);
+  if (bookedDayKeys.length === 0) return;
 
   if (!activeDayId || !byDay[activeDayId]) {
-    activeDayId = dayKeys[0];
+    activeDayId = bookedDayKeys[0];
   }
 
   const currentDayItems = byDay[activeDayId].items;
@@ -2135,7 +2134,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
 
   let html = `
     <div class="coupon-day-tabs">
-      ${dayKeys.map(dId => `
+      ${bookedDayKeys.map(dId => `
         <button class="coupon-day-tab ${dId === activeDayId ? 'active' : ''}" type="button" onclick="window.switchTicketDay('${b.orderId}', '${dId}', '${containerId}')">${byDay[dId].label}</button>
       `).join('')}
     </div>
