@@ -1034,13 +1034,13 @@
     return false;
   };
 
-  /* FLAT RESTRICTION POLICY: Restrict per flat by matching name & flat. Same name + flat can book more; new name for same flat is blocked. */
+  /* FLAT RESTRICTION POLICY: Same name + flat can book more; new name for same flat is blocked. */
   window.dbCheckFlatRegistrationMatch = async function(fullFlatNumber, inputName) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
     const snap = await getDocs(q);
     
-    if (snap.empty) return { allowed: true }; // Flat has no bookings yet
+    if (snap.empty) return { allowed: true };
 
     let existingName = "";
     snap.forEach(d => {
@@ -1492,6 +1492,40 @@ function showToast(message, tone){
   el.className = 'toast show ' + (tone || 'good');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(()=> el.classList.remove('show'), 4200);
+}
+
+/* ================= tabs ================= */
+function switchTab(tab){
+  document.getElementById('view-book').classList.toggle('hidden', tab!=='book');
+  document.getElementById('view-find').classList.toggle('hidden', tab!=='find');
+  document.getElementById('view-serve').classList.toggle('hidden', tab!=='serve');
+  document.getElementById('view-kitchen').classList.toggle('hidden', tab!=='kitchen');
+  document.getElementById('view-committee').classList.toggle('hidden', tab!=='committee');
+  
+  document.getElementById('tabBookBtn').classList.toggle('active', tab==='book');
+  document.getElementById('tabFindBtn').classList.toggle('active', tab==='find');
+  document.getElementById('tabServeBtn').classList.toggle('active', tab==='serve');
+  document.getElementById('tabKitchenBtn').classList.toggle('active', tab==='kitchen');
+  document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
+
+  if(tab!=='serve') stopCamera();
+  if(tab==='kitchen') {
+    const isKitchenUnlocked = !document.getElementById('kitchenPanel').classList.contains('hidden');
+    if(isKitchenUnlocked) renderKitchenDisplay();
+  }
+}
+
+function checkKitchenPin(){
+  const v = document.getElementById('kitchenPinInput').value.trim();
+  const msg = document.getElementById('kitchenPinMsg');
+  if(v === CONFIG.committeePin){
+    document.getElementById('kitchenPinGate').classList.add('hidden');
+    document.getElementById('kitchenPanel').classList.remove('hidden');
+    msg.innerHTML='';
+    renderKitchenDisplay();
+  }else{
+    msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
+  }
 }
 
 /* ================= render day pills + meal rows ================= */
