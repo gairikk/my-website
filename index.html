@@ -1297,7 +1297,7 @@ const CONFIG = {
   eventName: "Shubho Durga Puja 2026",
   upiId: "xxx@ybl",
   upiName: "xxx xxx",
-  committeePin: "7576",
+  // Note: committeePin has been moved to Firebase Cloud Functions for F12 security protection
   hmacSecretKey: "BHOG_BELA_SECRET_2026",
   parcelCharge: 15,
 
@@ -1689,16 +1689,107 @@ function switchTab(tab){
   }
 }
 
-function checkKitchenPin(){
+// Secured Firebase Cloud Function URL for Committee PIN Verification
+const CLOUD_FUNCTION_URL = "https://us-central1-my-website-db-ee1d5.cloudfunctions.net/verifyPin";
+
+async function checkPin(){
+  const v = document.getElementById('pinInput').value.trim();
+  const msg = document.getElementById('pinMsg');
+  
+  if(!v){
+    msg.innerHTML = '<div class="msg err">Please enter a PIN.</div>';
+    return;
+  }
+
+  msg.innerHTML = '<div class="msg">Verifying securely…</div>';
+
+  try {
+    const response = await fetch(CLOUD_FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: v })
+    });
+
+    const data = await response.json();
+
+    if(response.ok && data.authorized){
+      document.getElementById('pinGate').classList.add('hidden');
+      document.getElementById('committeePanel').classList.remove('hidden');
+      msg.innerHTML='';
+      generateReports();
+    } else {
+      msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
+    }
+  } catch(e) {
+    console.error(e);
+    msg.innerHTML = '<div class="msg err">Connection error. Please try again.</div>';
+  }
+}
+
+async function checkServePin(){
+  const v = document.getElementById('servePinInput').value.trim();
+  const msg = document.getElementById('servePinMsg');
+  
+  if(!v){
+    msg.innerHTML = '<div class="msg err">Please enter a PIN.</div>';
+    return;
+  }
+
+  msg.innerHTML = '<div class="msg">Verifying securely…</div>';
+
+  try {
+    const response = await fetch(CLOUD_FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: v })
+    });
+
+    const data = await response.json();
+
+    if(response.ok && data.authorized){
+      document.getElementById('servePinGate').classList.add('hidden');
+      document.getElementById('servePanel').classList.remove('hidden');
+      msg.innerHTML='';
+    } else {
+      msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
+    }
+  } catch(e) {
+    console.error(e);
+    msg.innerHTML = '<div class="msg err">Connection error. Please try again.</div>';
+  }
+}
+
+async function checkKitchenPin(){
   const v = document.getElementById('kitchenPinInput').value.trim();
   const msg = document.getElementById('kitchenPinMsg');
-  if(v === CONFIG.committeePin){
-    document.getElementById('kitchenPinGate').classList.add('hidden');
-    document.getElementById('kitchenPanel').classList.remove('hidden');
-    msg.innerHTML='';
-    renderKitchenDisplay();
-  }else{
-    msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
+  
+  if(!v){
+    msg.innerHTML = '<div class="msg err">Please enter a PIN.</div>';
+    return;
+  }
+
+  msg.innerHTML = '<div class="msg">Verifying securely…</div>';
+
+  try {
+    const response = await fetch(CLOUD_FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: v })
+    });
+
+    const data = await response.json();
+
+    if(response.ok && data.authorized){
+      document.getElementById('kitchenPinGate').classList.add('hidden');
+      document.getElementById('kitchenPanel').classList.remove('hidden');
+      msg.innerHTML='';
+      renderKitchenDisplay();
+    } else {
+      msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
+    }
+  } catch(e) {
+    console.error(e);
+    msg.innerHTML = '<div class="msg err">Connection error. Please try again.</div>';
   }
 }
 
@@ -2651,19 +2742,6 @@ async function renderKitchenDisplay() {
 }
 
 /* ================= COMMITTEE ADMIN & BULK CSV UPLOAD ================= */
-function checkPin(){
-  const v = document.getElementById('pinInput').value.trim();
-  const msg = document.getElementById('pinMsg');
-  if(v === CONFIG.committeePin){
-    document.getElementById('pinGate').classList.add('hidden');
-    document.getElementById('committeePanel').classList.remove('hidden');
-    msg.innerHTML='';
-    generateReports();
-  }else{
-    msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
-  }
-}
-
 function handleCSVFileSelect(evt) {
   const file = evt.target.files[0];
   if(!file) return;
@@ -2719,18 +2797,6 @@ function processAndUploadCSV() {
       }
     }
   });
-}
-
-function checkServePin(){
-  const v = document.getElementById('servePinInput').value.trim();
-  const msg = document.getElementById('servePinMsg');
-  if(v === CONFIG.committeePin){
-    document.getElementById('servePinGate').classList.add('hidden');
-    document.getElementById('servePanel').classList.remove('hidden');
-    msg.innerHTML='';
-  }else{
-    msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
-  }
 }
 
 async function fetchBooking(orderId){
