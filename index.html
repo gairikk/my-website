@@ -1911,7 +1911,6 @@ async function prepareReviewStep(){
 
   const newBookingTotal = grandTotal();
   
-  // Check if there is an existing booking for this flat to display earlier paid vs new amount split
   let earlierPaid = 0;
   try {
     const existingRes = await window.dbGetOrCreateActiveBooking(fullFlatNumber, name, document.getElementById('userPin').value.trim());
@@ -1923,13 +1922,14 @@ async function prepareReviewStep(){
   globalEarlierPaidAmount = earlierPaid;
   const combinedTotal = earlierPaid + newBookingTotal;
 
-  document.getElementById('grandTotalLbl').textContent = '₹' + combinedTotal;
+  // Display only the new booking amount as the payable amount in Step 3
+  document.getElementById('grandTotalLbl').textContent = '₹' + newBookingTotal;
   document.getElementById('paidAmountLbl').textContent = newBookingTotal;
   document.getElementById('cashAmountLbl').textContent = newBookingTotal;
 
   if (earlierPaid > 0) {
-    document.getElementById('upiPaymentDesc').innerHTML = `💡 <strong>Payment Breakdown:</strong> Earlier verified amount: <strong>₹${earlierPaid}</strong> + New booking amount: <strong>₹${newBookingTotal}</strong>. Total combined amount: <strong>₹${combinedTotal}</strong>. Please transfer the <strong>new booking amount (₹${newBookingTotal})</strong> via UPI and enter its UTR below for admin verification.`;
-    document.getElementById('cashPaymentDesc').innerHTML = `💵 Earlier verified amount: ₹${earlierPaid} + New booking amount: ₹${newBookingTotal}. Please pay the <strong>new amount of ₹${newBookingTotal}</strong> in cash to a committee volunteer.`;
+    document.getElementById('upiPaymentDesc').innerHTML = `💡 <strong>Payment Breakdown:</strong><br>• Total aggregated amount of all bookings: <strong>₹${combinedTotal}</strong><br>• Already paid / verified earlier: <strong>₹${earlierPaid}</strong><br>• New booking amount to pay now: <strong>₹${newBookingTotal}</strong>.<br><br>Please transfer <strong>₹${newBookingTotal}</strong> via UPI and enter its 12-digit UTR below for admin verification.`;
+    document.getElementById('cashPaymentDesc').innerHTML = `💵 <strong>Payment Breakdown:</strong><br>• Total aggregated amount: ₹${combinedTotal}<br>• Already paid: ₹${earlierPaid}<br>• New booking amount: <strong>₹${newBookingTotal}</strong>.<br><br>Please pay the new booking amount of <strong>₹${newBookingTotal}</strong> in cash to a committee volunteer.`;
   } else {
     document.getElementById('upiPaymentDesc').innerHTML = `Payments are collected directly by the puja committee's UPI ID. A volunteer verifies each payment against the committee's UPI statement (using your name / flat / UTR) and marks it "Verified" from the Committee tab. Your QR coupons unlock automatically once that happens.`;
     document.getElementById('cashPaymentDesc').innerHTML = `💵 Please pay ₹<span id="cashAmountLbl">${newBookingTotal}</span> in cash to a committee volunteer at the booking desk or food counter. Your coupon will show "Payment Pending" — and your QR codes stay locked — until a volunteer confirms they've received the cash and marks it verified.`;
@@ -2037,7 +2037,7 @@ async function confirmBooking(){
     if (existingActive && existingActive.booking) {
       booking = existingActive.booking;
       
-      // Smart merging: Combine quantities if the same meal/day/type already exists
+      // Merge new items into existing items array (combining quantities if same day/meal/type exists)
       newItems.forEach(newItem => {
         const existingItem = booking.items.find(i => i.day === newItem.day && i.meal === newItem.meal && i.type === newItem.type);
         if (existingItem) {
@@ -2048,12 +2048,15 @@ async function confirmBooking(){
         }
       });
 
+      // Add only the new booking amount to the aggregated total
       booking.total += newBookingTotal;
       
       if (newBookingTotal > 0) {
         booking.paymentStatus = 'pending';
         booking.paymentMethod = paymentMethod;
         booking.utr = utr || null;
+        // Keep track of the pending new amount for admin review display
+        booking.pendingNewAmount = newBookingTotal;
       }
     } else {
       const orderId = genOrderId();
@@ -2063,6 +2066,7 @@ async function confirmBooking(){
         paymentMethod,
         utr: (paymentMethod==='upi') ? (utr || null) : null,
         paymentStatus: newBookingTotal>0 ? 'pending' : 'complimentary',
+        pendingNewAmount: newBookingTotal,
         createdAt: Date.now(),
         verifiedAt: null
       };
@@ -2161,8 +2165,8 @@ function renderTicket(b, isFromMyCouponsTab = false){
     <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
     
-    <!-- Only show 'Book More Coupons' when viewing from My Coupons tab, hidden on initial booking success screen -->
-    ${isFromMyCouponsTab ? `<button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>` : ''}
+    <!-- Show 'Book More Coupons' when viewing from My Coupons tab or success ticket -->
+    <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
   `;
@@ -2399,8 +2403,6 @@ function renderMiniTicketInto(container, b){
       <div id="miniTabArea_${b.orderId}"></div>
 
       <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
-      
-      <!-- 'Book More Coupons' is shown inside My Coupons search results -->
       <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     </div>`;
   renderTabbedTicketContent(b, `miniTabArea_${b.orderId}`);
@@ -2694,6 +2696,11 @@ function paintLookupCard(b, isFromFoodCounter = false){
   const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
   const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
 
+  // Calculate bifurcation for Admin review/verification view
+  const aggregatedTotal = b.total || 0;
+  const newBookingAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : (b.paymentStatus === 'pending' ? aggregatedTotal : 0);
+  const alreadyPaidAmt = aggregatedTotal - newBookingAmt;
+
   div.innerHTML = `
     <div class="lc-head">
       <div>
@@ -2705,7 +2712,11 @@ function paintLookupCard(b, isFromFoodCounter = false){
 
     ${!isVerified ? `
       <div class="note alert" style="margin-top:0; margin-bottom:12px;">
-        ⚠️ <strong>Payment Unverified</strong>: Verify payment in Committee tab before serving meals.
+        ⚠️ <strong>Payment Unverified</strong>: Verify payment in Committee tab before serving meals.<br><br>
+        <strong>Payment Bifurcation:</strong><br>
+        • Total Amount (Aggregated all bookings): <strong>₹${aggregatedTotal}</strong><br>
+        • Already Paid (Earlier bookings): <strong>₹${alreadyPaidAmt}</strong><br>
+        • New Booking Amount (To be verified now): <strong>₹${newBookingAmt}</strong>
       </div>
     ` : ''}
 
@@ -2742,7 +2753,7 @@ function paintLookupCard(b, isFromFoodCounter = false){
 
     ${!isFromFoodCounter && b.paymentStatus==='pending' ? `
       <div class="field" style="margin-top:10px;">
-        <label>UTR / reference number ${b.paymentMethod==='cash'?'(not required for cash)':''}</label>
+        <label>UTR / reference number for New Amount (₹${newBookingAmt}) ${b.paymentMethod==='cash'?'(not required for cash)':''}</label>
         <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="${b.paymentMethod==='cash'?'Optional':'Required for UPI verification'}" maxlength="12">
       </div>
       <button class="btn btn-primary btn-block verify-btn" onclick="markVerified('${b.orderId}')">Mark Payment Verified</button>
@@ -2771,6 +2782,7 @@ async function markVerified(orderId){
   const utrEl = document.getElementById('utr_'+orderId);
   if(utrEl && utrEl.value.trim()) b.utr = utrEl.value.trim();
   b.paymentStatus = 'verified';
+  b.pendingNewAmount = 0; // Clear pending amount after verification
   b.verifiedAt = Date.now();
   await saveBooking(b);
   
@@ -2805,9 +2817,10 @@ async function loadPendingPayments(){
       const row = document.createElement('div');
       row.className='deliver-row';
       const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
+      const newAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : b.total;
       row.innerHTML = `
         <div class="dr-info">
-          <div class="dr-meal">${escapeHtml(b.name)} · Flat ${escapeHtml(b.flatNumber||'')} · ₹${b.total}</div>
+          <div class="dr-meal">${escapeHtml(b.name)} · Flat ${escapeHtml(b.flatNumber||'')} · New Due: ₹${newAmt}</div>
           <div class="dr-sub">${b.orderId} · ${methodTag}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
         </div>
         <button class="btn btn-outline" onclick="reviewPendingPayment('${b.orderId}')">Review</button>
