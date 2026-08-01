@@ -133,29 +133,53 @@
     color:var(--maroon-dark);
   }
 
-  /* Sub-tabs inside My Coupons for Days / Meals */
-  .coupon-subtabs {
+  /* Coupon Tabbed View Styles */
+  .coupon-day-tabs {
     display: flex;
     gap: 6px;
     margin-bottom: 12px;
     overflow-x: auto;
     padding-bottom: 4px;
   }
-  .coupon-subtab-btn {
+  .coupon-day-tab {
     flex: none;
     background: #FFF3E8;
     border: 1.5px solid var(--marigold);
     color: var(--maroon);
-    padding: 6px 12px;
+    padding: 6px 14px;
     border-radius: 10px;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
   }
-  .coupon-subtab-btn.active {
+  .coupon-day-tab.active {
     background: var(--marigold);
     color: #fff;
     border-color: var(--marigold);
+  }
+
+  .coupon-meal-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .coupon-meal-tab {
+    flex: 1;
+    background: #fff;
+    border: 1.5px solid var(--line);
+    color: var(--maroon-dark);
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+  }
+  .coupon-meal-tab.active {
+    background: var(--maroon);
+    color: #fff;
+    border-color: var(--maroon);
   }
 
   /* ---------- Progress Stepper Bar ---------- */
@@ -784,7 +808,7 @@
     <div id="ticketView" class="hidden"></div>
   </div>
 
-  <!-- ================= DEDICATED FIND MY COUPONS TAB ================= -->
+  <!-- ================= DEDICATED FIND MY COUPONS TAB (WITH DAY & MEAL TABS) ================= -->
   <div id="view-find" class="hidden">
     <div class="card">
       <p class="section-label">🔒 Find my coupons (PIN Protected)</p>
@@ -2016,48 +2040,6 @@ async function mealQrPayloadHMAC(b, it){
   return `${rawPayload}|${hmac}`;
 }
 
-function renderBookingMealsHtml(b){
-  const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
-  const byDay = {};
-  b.items.forEach(it=>{
-    if(!byDay[it.day]) byDay[it.day] = { label: it.dayLabel, items: [] };
-    byDay[it.day].items.push(it);
-  });
-  let html = '';
-  Object.keys(byDay).forEach(dayId=>{
-    html += `<div class="qr-day-group"><div class="qr-day-title">${byDay[dayId].label}</div>`;
-    byDay[dayId].items.forEach(it=>{
-      const typeTag = it.type ? `<span class="tag ${it.type==='veg'?'veg':'nonveg'}">${it.type==='veg'?'Veg':'Non-veg'}</span>` : '';
-      const freeTag = it.complimentary ? `<span class="tag free">FREE</span>` : '';
-      
-      const parcelCount = it.parcelQty || 0;
-      const dineInCount = (it.qty || 0) - parcelCount;
-      let packagingTags = '';
-      if(parcelCount > 0 && dineInCount > 0) {
-        packagingTags = `<span class="tag dinein">🍽️ ${dineInCount} Dine-in</span><span class="tag parcel">📦 ${parcelCount} Parcel</span>`;
-      } else if(parcelCount > 0) {
-        packagingTags = `<span class="tag parcel">📦 ${parcelCount} Parcel</span>`;
-      } else {
-        packagingTags = `<span class="tag dinein">🍽️ Dine-in</span>`;
-      }
-
-      const qid = `qr_${b.orderId}_${it.day}_${it.meal}_${it.type}`;
-      html += `
-        <div class="meal-qr-card">
-          <div class="meal-qr-head">
-            <span class="lbl">${it.mealLabel}${typeTag}${freeTag}${packagingTags}</span>
-            <span class="val">${it.delivered}/${it.qty} served</span>
-          </div>
-          ${isUnlocked
-            ? `<div class="qr-wrap" id="${qid}"></div>`
-            : `<div class="qr-locked">🔒 Unlocks automatically once payment is verified</div>`}
-        </div>`;
-    });
-    html += `</div>`;
-  });
-  return html;
-}
-
 function mountMealQrCodes(b, container = document){
   const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
   if(!isUnlocked) return;
@@ -2091,8 +2073,14 @@ function renderTicket(b){
           <div class="ticket-name">${escapeHtml(b.name)}</div>
           <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
           <div class="ticket-pay">${paymentMethodLabel(b)}</div>
-          ${renderBookingMealsHtml(b)}
-          <div class="ticket-item" style="margin-top:6px;"><span class="lbl">Total ${b.total>0?'payable':''}</span><span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span></div>
+          
+          <!-- TABBED VIEW FOR TICKET MEALS -->
+          <div id="ticketTabArea_${b.orderId}"></div>
+
+          <div class="ticket-item" style="margin-top:12px; border-top:1px solid var(--line); padding-top:8px;">
+            <span class="lbl">Total ${b.total>0?'payable':''}</span>
+            <span class="val" style="font-weight:700;color:var(--maroon);">${b.total>0?'₹'+b.total:'FREE'}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -2102,8 +2090,83 @@ function renderTicket(b){
     <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="startOver('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">Book More Coupons</button>
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
   `;
+  renderTabbedTicketContent(b, `ticketTabArea_${b.orderId}`);
   mountMealQrCodes(b, document);
 }
+
+function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMealId = null) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const isUnlocked = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
+  const byDay = {};
+  b.items.forEach(it => {
+    if(!byDay[it.day]) byDay[it.day] = { label: it.dayLabel, items: [] };
+    byDay[it.day].items.push(it);
+  });
+
+  const dayKeys = Object.keys(byDay);
+  if (dayKeys.length === 0) return;
+
+  if (!activeDayId || !byDay[activeDayId]) {
+    activeDayId = dayKeys[0];
+  }
+
+  const currentDayItems = byDay[activeDayId].items;
+  if (!activeMealId || !currentDayItems.some(i => i.meal === activeMealId)) {
+    activeMealId = currentDayItems[0].meal;
+  }
+
+  let html = `
+    <div class="coupon-day-tabs">
+      ${dayKeys.map(dId => `
+        <button class="coupon-day-tab ${dId === activeDayId ? 'active' : ''}" onclick="switchTicketDay('${b.orderId}', '${dId}')">${byDay[dId].label}</button>
+      `).join('')}
+    </div>
+    <div class="coupon-meal-tabs">
+      ${currentDayItems.map(it => `
+        <button class="coupon-meal-tab ${it.meal === activeMealId ? 'active' : ''}" onclick="switchTicketMeal('${b.orderId}', '${activeDayId}', '${it.meal}')">${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'})</button>
+      `).join('')}
+    </div>
+  `;
+
+  const selectedItem = currentDayItems.find(it => it.meal === activeMealId);
+  if (selectedItem) {
+    const typeTag = selectedItem.type ? `<span class="tag ${selectedItem.type==='veg'?'veg':'nonveg'}">${selectedItem.type==='veg'?'Veg':'Non-veg'}</span>` : '';
+    const freeTag = selectedItem.complimentary ? `<span class="tag free">FREE</span>` : '';
+    const parcelCount = selectedItem.parcelQty || 0;
+    const dineInCount = (selectedItem.qty || 0) - parcelCount;
+    let packagingTags = parcelCount > 0 ? `<span class="tag parcel">📦 ${parcelCount} Parcel</span>` : `<span class="tag dinein">🍽️ Dine-in</span>`;
+
+    const qid = `qr_${b.orderId}_${selectedItem.day}_${selectedItem.meal}_${selectedItem.type}`;
+    html += `
+      <div class="meal-qr-card" style="margin-top:6px;">
+        <div class="meal-qr-head">
+          <span class="lbl">${selectedItem.mealLabel}${typeTag}${freeTag}${packagingTags}</span>
+          <span class="val">${selectedItem.delivered}/${selectedItem.qty} served</span>
+        </div>
+        ${isUnlocked
+          ? `<div class="qr-wrap" id="${qid}"></div>`
+          : `<div class="qr-locked">🔒 Unlocks automatically once payment is verified</div>`}
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+  mountMealQrCodes(b, container);
+}
+
+window.switchTicketDay = function(orderId, dayId) {
+  fetchBooking(orderId).then(b => {
+    if(b) renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, null);
+  });
+};
+
+window.switchTicketMeal = function(orderId, dayId, mealId) {
+  fetchBooking(orderId).then(b => {
+    if(b) renderTabbedTicketContent(b, `ticketTabArea_${orderId}`, dayId, mealId);
+  });
+};
 
 /* SHARE TICKET DIRECTLY ON WHATSAPP */
 async function shareTicketWhatsApp(orderId) {
@@ -2230,9 +2293,13 @@ function renderMiniTicketInto(container, b){
       <div class="ticket-name">${escapeHtml(b.name)}</div>
       <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
       <div class="ticket-pay">${paymentMethodLabel(b)}</div>
-      ${renderBookingMealsHtml(b)}
+      
+      <!-- TABBED VIEW FOR MINI TICKET -->
+      <div id="miniTabArea_${b.orderId}"></div>
+
       <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
     </div>`;
+  renderTabbedTicketContent(b, `miniTabArea_${b.orderId}`);
   mountMealQrCodes(b, container);
 }
 
