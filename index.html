@@ -1084,7 +1084,6 @@
     return false;
   };
 
-  /* MERGE BOOKINGS UNDER THE SAME FLAT NUMBER & NAME (1 Order ID per resident) */
   window.dbGetOrCreateActiveBooking = async function(fullFlatNumber, name, pin) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
     const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
@@ -2010,10 +2009,20 @@ async function confirmBooking(){
 
     if (existingActive && existingActive.booking) {
       booking = existingActive.booking;
-      booking.items = booking.items.concat(newItems);
+
+      // Smart merging: if user adds plates for an existing day & meal type, combine quantities instead of duplicating rows!
+      newItems.forEach(newItem => {
+        const existingItem = booking.items.find(i => i.day === newItem.day && i.meal === newItem.meal && i.type === newItem.type);
+        if (existingItem) {
+          existingItem.qty += newItem.qty;
+          existingItem.parcelQty = (existingItem.parcelQty || 0) + (newItem.parcelQty || 0);
+        } else {
+          booking.items.push(newItem);
+        }
+      });
+
       booking.total += total;
       
-      // CRITICAL FIX: Explicitly set status to pending and update UTR/payment method so admin panel lists it for verification approval!
       if (total > 0) {
         booking.paymentStatus = 'pending';
         booking.paymentMethod = paymentMethod;
@@ -2095,7 +2104,7 @@ function mountMealQrCodes(b, container = document){
   });
 }
 
-function renderTicket(b){
+function renderTicket(b, isFromMyCouponsTab = false){
   const wrap = document.getElementById('ticketView');
   wrap.innerHTML = `
     <div id="ticketCaptureArea">
@@ -2124,7 +2133,10 @@ function renderTicket(b){
     <div class="note">Each meal variant has its own QR code. Show the matching one at that meal's counter — a volunteer scans it once per plate to mark delivery. This page updates live once your payment is verified.</div>
     <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
-    <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
+    
+    <!-- Hide 'Book More Coupons' on initial booking success view as requested -->
+    ${isFromMyCouponsTab ? `<button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>` : ''}
+    
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
   `;
   renderTabbedTicketContent(b, `ticketTabArea_${b.orderId}`);
@@ -2199,39 +2211,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
   mountMealQrCodes(b, container);
 }
 
-/* BOOK MORE COUPONS FLOW: Skips step 1, pre-fills context, redirects directly to Step 2 */
-function bookMoreCoupons(name, flatNumber, pin) {
-  if (ticketUnsubscribe) ticketUnsubscribe();
-  cart = {};
-  
-  const [block, flat] = flatNumber.split('-');
-  document.getElementById('userName').value = name;
-  document.getElementById('userPin').value = pin;
-  document.getElementById('blockSelect').value = block || '';
-  
-  const flatSelect = document.getElementById('flatSelect');
-  if (block) {
-    flatSelect.innerHTML = generateFlatOptions(block);
-    flatSelect.value = flat || '';
-    flatSelect.disabled = false;
-  }
-
-  isSubscriptionPaid = true; // Already verified during initial booking
-  document.getElementById('subStatusMsg').innerHTML = '<div class="msg ok" style="margin-top:6px; font-weight:600;">✓ Existing subscription &amp; flat credentials verified.</div>';
-  document.getElementById('privacyTermsConfirm').checked = true;
-
-  document.getElementById('ticketView').classList.add('hidden');
-  document.getElementById('bookForm').style.display = 'block';
-
-  activeDay = CONFIG.days[0].id;
-  renderDayPills();
-  renderMealRows();
-  updateTotals();
-
-  // Jump directly to Step 2 (Choose Meals)
-  goToStep(2);
-}
-
+/* EXPOSE TAB SWITCHERS GLOBALLY WITH DYNAMIC CONTAINER TARGETING */
 window.switchTicketDay = function(orderId, dayId, targetContainerId) {
   const cId = targetContainerId || `ticketTabArea_${orderId}`;
   const b = window.activeBookingCache[orderId];
@@ -2392,10 +2372,48 @@ function renderMiniTicketInto(container, b){
       <div id="miniTabArea_${b.orderId}"></div>
 
       <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
+      
+      <!-- 'Book More Coupons' is shown inside My Coupons search results as requested -->
       <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     </div>`;
   renderTabbedTicketContent(b, `miniTabArea_${b.orderId}`);
   mountMealQrCodes(b, container);
+}
+
+/* BOOK MORE COUPONS FLOW: Skips step 1, pre-fills context, redirects directly to Step 2 */
+function bookMoreCoupons(name, flatNumber, pin) {
+  if (ticketUnsubscribe) ticketUnsubscribe();
+  cart = {};
+  
+  const [block, flat] = flatNumber.split('-');
+  document.getElementById('userName').value = name;
+  document.getElementById('userPin').value = pin;
+  document.getElementById('blockSelect').value = block || '';
+  
+  const flatSelect = document.getElementById('flatSelect');
+  if (block) {
+    flatSelect.innerHTML = generateFlatOptions(block);
+    flatSelect.value = flat || '';
+    flatSelect.disabled = false;
+  }
+
+  isSubscriptionPaid = true; 
+  document.getElementById('subStatusMsg').innerHTML = '<div class="msg ok" style="margin-top:6px; font-weight:600;">✓ Existing subscription &amp; flat credentials verified.</div>';
+  document.getElementById('privacyTermsConfirm').checked = true;
+
+  // Switch to Book tab view
+  switchTab('book');
+
+  document.getElementById('ticketView').classList.add('hidden');
+  document.getElementById('bookForm').style.display = 'block';
+
+  activeDay = CONFIG.days[0].id;
+  renderDayPills();
+  renderMealRows();
+  updateTotals();
+
+  // Jump directly to Step 2 (Choose Meals)
+  goToStep(2);
 }
 
 /* ================= KITCHEN DISPLAY LIVE FEED ================= */
