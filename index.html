@@ -277,6 +277,10 @@
     color: #fff;
     border-color: var(--maroon);
   }
+  .coupon-meal-tab.pending-tab {
+    border-color: var(--marigold);
+    background: #FFF8ED;
+  }
 
   /* Refined Breakdown Box inside QR ticket card */
   .plate-breakdown-box {
@@ -2525,9 +2529,9 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
       ${currentDayItems.map(it => {
         const mKey = getMealKey(it);
         const typeStr = it.type === 'veg' ? 'Veg' : 'Non-Veg';
-        const pendingBadge = (b.paymentStatus === 'pending') ? ' ⏳ (Pending Payment)' : '';
+        const pendingBadge = (b.paymentStatus === 'pending') ? ' ⏳ (Pending)' : '';
         return `
-          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" type="button" onclick="window.switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})${pendingBadge}</button>
+          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''} ${b.paymentStatus === 'pending' ? 'pending-tab' : ''}" type="button" onclick="window.switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})${pendingBadge}</button>
         `;
       }).join('')}
     </div>
@@ -3080,7 +3084,7 @@ function renderAdminTabbedTicketContent(b, containerId, activeDayId = null, acti
         const typeStr = it.type === 'veg' ? 'Veg' : 'Non-Veg';
         const pendingBadge = (b.paymentStatus === 'pending') ? ' ⏳ (Pending)' : '';
         return `
-          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" type="button" onclick="window.switchAdminTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})${pendingBadge}</button>
+          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''} ${b.paymentStatus === 'pending' ? 'pending-tab' : ''}" type="button" onclick="window.switchAdminTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})${pendingBadge}</button>
         `;
       }).join('')}
     </div>
@@ -3256,8 +3260,7 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
 }
 
 async function reviewPendingPayment(orderId) {
-  // Check both containers depending on whether we are in Counter or Committee Admin tab
-  let results = document.getElementById('committeePanel');
+  let results = document.getElementById('adminLookupResults');
   if (document.getElementById('view-committee').classList.contains('hidden')) {
     results = document.getElementById('serveLookupResults');
   } else {
@@ -3287,13 +3290,21 @@ async function loadPendingPayments(){
     wrap.innerHTML='';
     pending.forEach(b=>{
       window.activeBookingCache[b.orderId] = b;
+      
+      // Compute specific pending meals/items description for this pending order
+      const pendingMealsDesc = (b.items || [])
+        .map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`)
+        .join(', ');
+
       const row = document.createElement('div');
       row.className='deliver-row';
       const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
       const newAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : b.total;
+      
       row.innerHTML = `
         <div class="dr-info">
           <div class="dr-meal">${escapeHtml(b.name)} · Flat ${escapeHtml(b.flatNumber||'')} · New Due: ₹${newAmt}</div>
+          <div class="dr-sub" style="color:var(--marigold); font-weight:600;">Meals: ${escapeHtml(pendingMealsDesc)}</div>
           <div class="dr-sub">${b.orderId} · ${methodTag}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
         </div>
         <button class="btn btn-outline" onclick="reviewPendingPayment('${b.orderId}')">Review</button>
@@ -3562,7 +3573,7 @@ function scanLoop(){
         stopCamera();
         window.scrollTo({top:0, behavior:'smooth'});
         if(payload.day && payload.meal && payload.type){
-          handleMealScan(payload.orderId, payload.day, payload.meal, payload.type, payload.hmac);
+          handleMealScan(payload.orderId, payload.payload?.day || payload.day, payload.meal, payload.type, payload.hmac);
         } else {
           document.getElementById('serveLookupInput').value = payload.orderId;
           doLookupDirect('serveLookupInput');
