@@ -137,10 +137,23 @@
 
   .tabs{
     display:flex;
-    gap:4px;
+    justify-content: space-between;
+    align-items: center;
     margin-top:14px;
     overflow-x:auto;
     padding-bottom:4px;
+    gap: 4px;
+  }
+  .tabs-left {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+  }
+  .tabs-right {
+    display: flex;
+    gap: 4px;
+    position: relative;
+    flex: none;
   }
   .tab-btn{
     flex:none;
@@ -172,6 +185,43 @@
   .tab-btn.highlight-guide.active {
     background: var(--gold);
     color: var(--maroon-dark);
+  }
+
+  /* Admin Dropdown Submenu Container */
+  .admin-dropdown-menu {
+    position: absolute;
+    top: 115%;
+    right: 0;
+    background: var(--maroon-dark);
+    border: 1px solid var(--gold-soft);
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 8px 24px rgba(43,15,15,0.4);
+    z-index: 200;
+    min-width: 140px;
+  }
+  .admin-dropdown-menu.hidden {
+    display: none !important;
+  }
+  .admin-sub-btn {
+    background: rgba(251,243,228,0.08);
+    border: 1px solid rgba(251,243,228,0.2);
+    color: var(--ivory);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .admin-sub-btn:hover, .admin-sub-btn.active {
+    background: var(--gold);
+    color: var(--maroon-dark);
+    border-color: var(--gold);
   }
 
   /* Coupon Tabbed View Styles */
@@ -686,7 +736,7 @@
   }
 </style>
 </head>
-<body>
+<body onclick="closeAdminDropdown(event)">
 
 <div class="hero">
   <!-- Festive Travelling Banner Animation -->
@@ -711,13 +761,21 @@
     </svg>
   </div>
   <div class="tabs">
-    <!-- User Guide Tab made first & highlighted -->
-    <button class="tab-btn highlight-guide active" id="tabGuideBtn" onclick="switchTab('guide')">📖 User Guide</button>
-    <button class="tab-btn" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book</button>
-    <button class="tab-btn" id="tabFindBtn" onclick="switchTab('find')">🔍 My Coupons</button>
-    <button class="tab-btn" id="tabServeBtn" onclick="switchTab('serve')">🍽️ Counter</button>
-    <button class="tab-btn" id="tabKitchenBtn" onclick="switchTab('kitchen')">👨‍🍳 Kitchen</button>
-    <button class="tab-btn" id="tabCommitteeBtn" onclick="switchTab('committee')">🧾 Admin</button>
+    <div class="tabs-left">
+      <!-- User Guide Tab made first & highlighted -->
+      <button class="tab-btn highlight-guide active" id="tabGuideBtn" onclick="switchTab('guide')">📖 User Guide</button>
+      <button class="tab-btn" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book</button>
+      <button class="tab-btn" id="tabFindBtn" onclick="switchTab('find')">🔍 My Coupons</button>
+    </div>
+    <div class="tabs-right">
+      <!-- Admin Dropdown Menu at the Right Side -->
+      <button class="tab-btn" id="tabAdminDropdownBtn" onclick="toggleAdminDropdown(event)">⚙️ Admin ▾</button>
+      <div id="adminDropdownMenu" class="admin-dropdown-menu hidden">
+        <button class="admin-sub-btn" id="tabServeBtn" onclick="switchTab('serve')">🍽️ Counter</button>
+        <button class="admin-sub-btn" id="tabKitchenBtn" onclick="switchTab('kitchen')">👨‍🍳 Kitchen</button>
+        <button class="admin-sub-btn" id="tabCommitteeBtn" onclick="switchTab('committee')">🧾 Committee Admin</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -733,7 +791,6 @@
 
       <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">1. How to Book Food Coupons</h3>
       <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
-        <li><strong>Go to the "Book" tab.</li>
         <li><strong>Step 1 (Details):</strong> Enter your full name, select your Block and Flat number, and set a secure <strong>4-digit PIN</strong>. <br>⚠️ <em>Remember this PIN! You will need it to view your coupons or add more meals later.</em></li>
         <li><strong>Step 2 (Choose Meals):</strong> Select your plate quantities across Puja days (Saptami, Ashtami, etc.), choosing between Dine-in or Parcel boxes (+₹15 charge).</li>
         <li><strong>Step 3 (Review & Pay):</strong> Choose Cash or UPI payment. Complete the transaction or record your 12-digit UTR reference number.</li>
@@ -1298,7 +1355,6 @@ const CONFIG = {
   eventName: "Shubho Durga Puja 2026",
   upiId: "xxx@ybl",
   upiName: "xxx xxx",
-  // Note: committeePin has been moved to Firebase Cloud Functions for F12 security protection
   hmacSecretKey: "BHOG_BELA_SECRET_2026",
   parcelCharge: 15,
 
@@ -1667,6 +1723,21 @@ function showToast(message, tone){
   showToast._t = setTimeout(()=> el.classList.remove('show'), 4200);
 }
 
+/* ================= admin dropdown menu toggle ================= */
+function toggleAdminDropdown(event) {
+  event.stopPropagation();
+  const menu = document.getElementById('adminDropdownMenu');
+  menu.classList.toggle('hidden');
+}
+
+function closeAdminDropdown(event) {
+  const menu = document.getElementById('adminDropdownMenu');
+  const btn = document.getElementById('tabAdminDropdownBtn');
+  if (menu && btn && !menu.contains(event.target) && !btn.contains(event.target)) {
+    menu.classList.add('hidden');
+  }
+}
+
 /* ================= tabs ================= */
 function switchTab(tab){
   document.getElementById('view-book').classList.toggle('hidden', tab!=='book');
@@ -1679,9 +1750,18 @@ function switchTab(tab){
   document.getElementById('tabBookBtn').classList.toggle('active', tab==='book');
   document.getElementById('tabFindBtn').classList.toggle('active', tab==='find');
   document.getElementById('tabGuideBtn').classList.toggle('active', tab==='guide');
+  
+  // Highlight Admin dropdown if any of the sub-tabs are active
+  const isAdminSubTab = (tab === 'serve' || tab === 'kitchen' || tab === 'committee');
+  const adminDropdownBtn = document.getElementById('tabAdminDropdownBtn');
+  adminDropdownBtn.classList.toggle('active', isAdminSubTab);
+
   document.getElementById('tabServeBtn').classList.toggle('active', tab==='serve');
   document.getElementById('tabKitchenBtn').classList.toggle('active', tab==='kitchen');
   document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
+
+  // Hide dropdown menu after selecting
+  document.getElementById('adminDropdownMenu').classList.add('hidden');
 
   if(tab!=='serve') stopCamera();
   if(tab==='kitchen') {
@@ -2303,7 +2383,7 @@ function statusLabel(status){
   return '⏳ Payment pending verification';
 }
 function paymentMethodLabel(b){
-  if(b.paymentMethod==='cash') return '💵 Paid in cash';
+  if(b.paymentMethod==='cash') return '💵 Paying by cash';
   if(b.paymentMethod==='upi') return '📱 Paid via UPI' + (b.utr?(' · UTR '+b.utr):'');
   return '';
 }
