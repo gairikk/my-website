@@ -1300,14 +1300,15 @@
 
   window.dbGetOrCreateActiveBooking = async function(fullFlatNumber, name, pin) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
-    const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
-    const snap = await getDocs(q);
+    const snap = await getDocs(collection(db, "bookings"));
     
     let existingBooking = null;
     snap.forEach(d => {
       const data = d.data();
-      if (data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim()) {
-        existingBooking = data;
+      if (data.flatNumber && data.flatNumber.trim() === cleanFlatId) {
+        if (data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim()) {
+          existingBooking = data;
+        }
       }
     });
 
@@ -1315,9 +1316,17 @@
       return { booking: existingBooking };
     }
 
-    if (!snap.empty) {
-      let otherName = "";
-      snap.forEach(d => { otherName = d.data().name; });
+    let otherName = "";
+    let foundOther = false;
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.flatNumber && data.flatNumber.trim() === cleanFlatId) {
+        otherName = data.name;
+        foundOther = true;
+      }
+    });
+
+    if (foundOther) {
       return { restricted: true, existingName: otherName };
     }
 
@@ -1349,7 +1358,6 @@
   };
 
   window.dbGetBookingsByNameAndFlatAndPin = async function(name, flat, pin) {
-    // FIX: Use dbGetAllBookings fallback or client-side filtering to avoid complex composite index requirements
     const snap = await getDocs(collection(db, "bookings"));
     const results = [];
     snap.forEach(d => {
@@ -2385,7 +2393,7 @@ async function confirmBooking(){
         booking.paymentMethod = paymentMethod;
         booking.utr = utr || null;
         booking.pendingNewAmount = newBookingTotal;
-        booking.pendingItems = newItems; // Store ONLY the newly added items for pending verification list!
+        booking.pendingItems = newItems; // Exactly the newly added items
       }
     } else {
       const orderId = genOrderId();
@@ -3160,7 +3168,7 @@ async function loadPendingPayments(){
     pending.forEach(b=>{
       window.activeBookingCache[b.orderId] = b;
       
-      // STRICTLY SHOW ONLY THE RECENTLY ADDED/PENDING ITEMS FOR +MORE BOOKINGS
+      // ABSOLUTE FIX: Show ONLY the newly added items for pending +more payment verifications
       const targetItemsList = (b.pendingItems && b.pendingItems.length > 0) ? b.pendingItems : b.items;
       const pendingMealsDesc = targetItemsList
         .map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`)
