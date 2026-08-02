@@ -229,7 +229,7 @@
     border-color: var(--gold);
   }
 
-  /* Coupon Tabbed View Styles */
+  /* Coupon Tabbed View Styles (Used in Admin Flat Lookup) */
   .coupon-day-tabs {
     display: flex;
     gap: 6px;
@@ -1666,12 +1666,12 @@ async function checkSubscriptionStatus() {
       const upiLink = `upi://pay?pa=${encodeURIComponent(CONFIG.upiId)}&pn=${encodeURIComponent(CONFIG.upiName)}&am=500&cu=INR&tn=${encodeURIComponent('Annual Festival Subscription - Flat '+fullFlatNumber)}`;
       quickPayContainer.innerHTML = `
         <div class="upi-box" style="margin-top:12px;">
-          <div style="font-family:'Baloo 2',cursive; font-weight:700; color:var(--maroon-dark); font-size:15px;">💳 Pay Annual Festival Subscription (₹500)</div>
+          <div style="font-family:'Baloo 2',cursive; font-weight:700; color:var(--maroon-dark); font-size:15px;">💳 Pay Annual Festival Subscription (₹2500)</div>
           <div style="font-size:12.5px; color:#8a6a55; margin:4px 0;">Scan with UPI or tap below to pay your subscription.</div>
           <div id="subUpiQr" style="display:flex;justify-content:center;margin:8px 0;"></div>
-          <a class="btn btn-primary" style="display:inline-block;margin-top:4px;text-decoration:none;" href="${upiLink}">Pay ₹500 via UPI app</a>
+          <a class="btn btn-primary" style="display:inline-block;margin-top:4px;text-decoration:none;" href="${upiLink}">Pay ₹2500 via UPI app</a>
           <div class="note alert" style="margin-top:10px; font-size:12px;">
-            ℹ️ <strong>Note:</strong> Please share the screenshot of the subscription payment with <strong>Mr. Gairik</strong> for enablement of food booking.
+            ℹ️ <strong>Note:</strong> Please share the screenshot of the subscription payment with <strong>Mr. Gairik</strong> for enablement of food booking (usually enabled within 24 hours).
           </div>
         </div>
       `;
@@ -2395,7 +2395,7 @@ async function confirmBooking(){
         booking.paymentMethod = paymentMethod;
         booking.utr = utr || null;
         booking.pendingNewAmount = newBookingTotal;
-        booking.pendingItems = newItems; // Exactly the newly added items for pending view
+        booking.pendingItems = newItems; // Exactly the newly added items
       }
     } else {
       const orderId = genOrderId();
@@ -2429,7 +2429,7 @@ async function confirmBooking(){
 
     renderTicket(booking, false);
     document.getElementById('bookForm').style.display = 'none';
-    document.getElementById('ticketView').classList.add('hidden'); // Fix: keep ticket view visible
+    document.getElementById('ticketView').classList.add('hidden');
     document.getElementById('ticketView').classList.remove('hidden');
     window.scrollTo({top:0, behavior:'smooth'});
 
@@ -3180,7 +3180,7 @@ async function loadPendingPayments(){
     pending.forEach(b=>{
       window.activeBookingCache[b.orderId] = b;
       
-      // FIX APPLIED HERE: Display ONLY the newly added pending items in the payment verification list
+      // STRICTLY SHOW ONLY THE RECENTLY ADDED/PENDING ITEMS FOR +MORE BOOKINGS
       const targetItemsList = (b.pendingItems && b.pendingItems.length > 0) ? b.pendingItems : b.items;
       const pendingMealsDesc = targetItemsList
         .map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`)
