@@ -794,7 +794,7 @@
 
       <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">1. How to Book Food Coupons</h3>
       <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
-        <li></strong> Go to the <strong>"Book"</strong> tab and follow the 3-step process below:</li>
+        <li>Go to the <strong>"Book"</strong> tab and follow the 3-step process below:</li>
         <li><strong>Step 1 (Details):</strong> Enter your full name, select your Block and Flat number, and set a secure <strong>4-digit PIN</strong>. <br>⚠️ <em>Remember this PIN! You will need it to view your coupons or add more meals later.</em></li>
         <li><strong>Step 2 (Choose Meals):</strong> Select your plate quantities across Puja days (Saptami, Ashtami, etc.), choosing between Dine-in or Parcel boxes (+₹15 charge).</li>
         <li><strong>Step 3 (Review & Pay):</strong> Choose Cash or UPI payment. Complete the transaction or record your 12-digit UTR reference number.</li>
@@ -3084,32 +3084,48 @@ async function markVerifiedFromAdmin(orderId) {
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
 
+/* ROBUST COUNTER & ADMIN LOOKUP FIX */
 async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter = false){
   const results = document.getElementById(targetContainerId);
   if(!results) return;
   results.innerHTML = '<div class="card"><div class="empty">Searching…</div></div>';
-  if(!queryVal){ results.innerHTML=''; return; }
+  const cleanQuery = queryVal ? queryVal.trim() : '';
+  if(!cleanQuery){ results.innerHTML=''; return; }
 
   let matches = [];
-  const b = await fetchBooking(queryVal);
-  if(b) {
-    matches.push(b);
+  
+  // 1. Try direct document fetch first if it looks like an Order ID
+  const directBooking = await fetchBooking(cleanQuery);
+  if(directBooking) {
+    matches.push(directBooking);
   } else {
-    const all = await window.dbGetAllBookings();
-    const qLower = queryVal.toLowerCase();
-    all.forEach(item => {
-      if((item.name && item.name.toLowerCase().includes(qLower)) || (item.flatNumber && item.flatNumber.toLowerCase().includes(qLower))) {
-        matches.push(item);
-      }
-    });
+    // 2. Otherwise fetch all bookings and filter safely on the client side
+    try {
+      const all = await window.dbGetAllBookings();
+      const qLower = cleanQuery.toLowerCase();
+      all.forEach(item => {
+        const itemName = (item.name || '').toLowerCase();
+        const itemFlat = (item.flatNumber || '').toLowerCase();
+        const itemOid = (item.orderId || '').toLowerCase();
+
+        if(itemName.includes(qLower) || itemFlat.includes(qLower) || itemOid.includes(qLower)) {
+          if(!matches.some(m => m.orderId === item.orderId)) {
+            matches.push(item);
+          }
+        }
+      });
+    } catch(e) {
+      console.error("Lookup error:", e);
+    }
   }
 
-  if(matches.length===0){
-    results.innerHTML = '<div class="card"><div class="empty">No booking found for that Order ID / Name / Flat.</div></div>';
+  if(matches.length === 0){
+    results.innerHTML = '<div class="card"><div class="empty">No booking found for "'+escapeHtml(cleanQuery)+'". Try searching by exact Order ID, Resident Name, or Flat (e.g., A1-101).</div></div>';
     return;
   }
-  results.innerHTML='';
-  matches.forEach(b=> {
+
+  results.innerHTML = '';
+  matches.forEach(b => {
     if (isFromFoodCounter) {
       renderLookupCard(results, b, true);
     } else {
