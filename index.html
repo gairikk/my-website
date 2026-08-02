@@ -229,7 +229,7 @@
     border-color: var(--gold);
   }
 
-  /* Coupon Tabbed View Styles (Used in Admin Flat Lookup) */
+  /* Coupon Tabbed View Styles (Used in Admin & Counter Lookup) */
   .coupon-day-tabs {
     display: flex;
     gap: 6px;
@@ -2353,7 +2353,7 @@ async function confirmBooking(){
 
     if(ticketUnsubscribe) ticketUnsubscribe();
     ticketUnsubscribe = window.dbListenToBooking(booking.orderId, (updatedBooking) => {
-      window.activeBookingCache[booking.orderId] = updatedBooking;
+      window.activeBookingCache[updatedBooking.orderId] = updatedBooking;
       renderTicket(updatedBooking, false);
     });
 
@@ -2533,7 +2533,7 @@ window.switchTicketDay = function(orderId, dayId, targetContainerId) {
   } else {
     fetchBooking(orderId).then(booking => {
       if(booking) {
-        window.activeBookingCache[orderId] = booking;
+        window.activeBookingCache[booking.orderId] = booking;
         renderTabbedTicketContent(booking, cId, dayId, null);
       }
     });
@@ -2548,7 +2548,7 @@ window.switchTicketMeal = function(orderId, dayId, mealKey, targetContainerId) {
   } else {
     fetchBooking(orderId).then(booking => {
       if(booking) {
-        window.activeBookingCache[orderId] = booking;
+        window.activeBookingCache[booking.orderId] = booking;
         renderTabbedTicketContent(booking, cId, dayId, mealKey);
       }
     });
@@ -2672,6 +2672,7 @@ async function searchMyCoupons(){
     matches.sort((a,b)=>b.createdAt-a.createdAt);
     results.innerHTML='';
     matches.forEach(b=>{
+      window.activeBookingCache[b.orderId] = b;
       const div = document.createElement('div');
       div.id = 'mc_'+b.orderId;
       results.appendChild(div);
@@ -2875,7 +2876,7 @@ async function fetchBooking(orderId){
   if(window.activeBookingCache[orderId]) return window.activeBookingCache[orderId];
   try{
     const b = await window.dbGetBooking(orderId);
-    if(b) window.activeBookingCache[orderId] = b;
+    if(b) window.activeBookingCache[b.orderId] = b;
     return b;
   }catch(e){ return null; }
 }
@@ -2917,13 +2918,16 @@ async function searchFlatBookingsAdmin() {
       return;
     }
     results.innerHTML = '';
-    matches.forEach(b => renderAdminFlatLookupCard(results, b));
+    matches.forEach(b => {
+      window.activeBookingCache[b.orderId] = b;
+      renderAdminFlatLookupCard(results, b);
+    });
   } catch(e) {
     results.innerHTML = '<div class="card"><div class="empty">Error fetching flat bookings.</div></div>';
   }
 }
 
-/* ================= ENHANCED ADMIN FLAT LOOKUP CARD (Tabular & Clickable like My Coupons) ================= */
+/* ================= ENHANCED ADMIN & COUNTER FLAT LOOKUP CARD ================= */
 function renderAdminFlatLookupCard(container, b) {
   const div = document.createElement('div');
   div.className = 'ticket';
@@ -2935,7 +2939,7 @@ function renderAdminFlatLookupCard(container, b) {
 
   div.innerHTML = `
     <div class="ticket-head">
-      <div style="font-size:11px;letter-spacing:.1em;color:var(--gold-soft);">ADMIN FLAT LOOKUP</div>
+      <div style="font-size:11px;letter-spacing:.1em;color:var(--gold-soft);">BOOKING LOOKUP RESULT</div>
       <div class="oid">${b.orderId}</div>
       <div class="status ${b.paymentStatus}">${statusLabel(b.paymentStatus)}</div>
     </div>
@@ -3082,7 +3086,7 @@ async function markVerifiedFromAdmin(orderId) {
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
 
-/* ROBUST COUNTER & ADMIN LOOKUP FIX */
+/* FULLY COMPATIBLE MANUAL LOOKUP (COUNTER & ADMIN TABS) */
 async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter = false){
   const results = document.getElementById(targetContainerId);
   if(!results) return;
@@ -3092,29 +3096,30 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
 
   let matches = [];
   
-  // 1. Try direct document fetch first if it looks like an Order ID
-  const directBooking = await fetchBooking(cleanQuery);
-  if(directBooking) {
-    matches.push(directBooking);
-  } else {
-    // 2. Otherwise fetch all bookings and filter safely on the client side
-    try {
-      const all = await window.dbGetAllBookings();
-      const qLower = cleanQuery.toLowerCase();
-      all.forEach(item => {
-        const itemName = (item.name || '').toLowerCase();
-        const itemFlat = (item.flatNumber || '').toLowerCase();
-        const itemOid = (item.orderId || '').toLowerCase();
-
-        if(itemName.includes(qLower) || itemFlat.includes(qLower) || itemOid.includes(qLower)) {
-          if(!matches.some(m => m.orderId === item.orderId)) {
-            matches.push(item);
-          }
-        }
-      });
-    } catch(e) {
-      console.error("Lookup error:", e);
+  try {
+    // 1. Try direct exact fetch by Order ID first
+    const direct = await fetchBooking(cleanQuery);
+    if (direct) {
+      matches.push(direct);
     }
+
+    // 2. Fetch all bookings to perform flexible client-side substring matching for name, flat, and order ID
+    const all = await window.dbGetAllBookings();
+    const qLower = cleanQuery.toLowerCase();
+
+    all.forEach(item => {
+      const itemName = (item.name || '').toLowerCase();
+      const itemFlat = (item.flatNumber || '').toLowerCase();
+      const itemOid = (item.orderId || '').toLowerCase();
+
+      if (itemName.includes(qLower) || itemFlat.includes(qLower) || itemOid.includes(qLower)) {
+        if (!matches.some(m => m.orderId === item.orderId)) {
+          matches.push(item);
+        }
+      }
+    });
+  } catch(e) {
+    console.error("Lookup error:", e);
   }
 
   if(matches.length === 0){
@@ -3124,13 +3129,8 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
 
   results.innerHTML = '';
   matches.forEach(b => {
-    // Cache the booking so tab switchers can access it
     window.activeBookingCache[b.orderId] = b;
-    if (isFromFoodCounter) {
-      renderLookupCard(results, b, true);
-    } else {
-      renderAdminFlatLookupCard(results, b);
-    }
+    renderAdminFlatLookupCard(results, b);
   });
 }
 
