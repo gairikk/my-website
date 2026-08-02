@@ -229,7 +229,7 @@
     border-color: var(--gold);
   }
 
-  /* Coupon Tabbed View Styles */
+  /* Coupon Tabbed View Styles (Used in Admin Flat Lookup) */
   .coupon-day-tabs {
     display: flex;
     gap: 6px;
@@ -276,10 +276,6 @@
     background: var(--maroon);
     color: #fff;
     border-color: var(--maroon);
-  }
-  .coupon-meal-tab.pending-tab {
-    border-color: var(--marigold);
-    background: #FFF8ED;
   }
 
   /* Refined Breakdown Box inside QR ticket card */
@@ -1300,15 +1296,14 @@
 
   window.dbGetOrCreateActiveBooking = async function(fullFlatNumber, name, pin) {
     const cleanFlatId = fullFlatNumber.replace(/–|—/g, '-').trim();
-    const snap = await getDocs(collection(db, "bookings"));
+    const q = query(collection(db, "bookings"), where("flatNumber", "==", cleanFlatId));
+    const snap = await getDocs(q);
     
     let existingBooking = null;
     snap.forEach(d => {
       const data = d.data();
-      if (data.flatNumber && data.flatNumber.trim() === cleanFlatId) {
-        if (data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim()) {
-          existingBooking = data;
-        }
+      if (data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim()) {
+        existingBooking = data;
       }
     });
 
@@ -1316,17 +1311,9 @@
       return { booking: existingBooking };
     }
 
-    let otherName = "";
-    let foundOther = false;
-    snap.forEach(d => {
-      const data = d.data();
-      if (data.flatNumber && data.flatNumber.trim() === cleanFlatId) {
-        otherName = data.name;
-        foundOther = true;
-      }
-    });
-
-    if (foundOther) {
+    if (!snap.empty) {
+      let otherName = "";
+      snap.forEach(d => { otherName = d.data().name; });
       return { restricted: true, existingName: otherName };
     }
 
@@ -1358,12 +1345,12 @@
   };
 
   window.dbGetBookingsByNameAndFlatAndPin = async function(name, flat, pin) {
-    const snap = await getDocs(collection(db, "bookings"));
+    const q = query(collection(db, "bookings"), where("flatNumber", "==", flat.trim()));
+    const snap = await getDocs(q);
     const results = [];
     snap.forEach(d => {
       const data = d.data();
       if(
-        data.flatNumber && data.flatNumber.trim() === flat.trim() &&
         data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim() &&
         data.userPin && data.userPin === pin.trim()
       ) {
@@ -1375,27 +1362,22 @@
   };
 
   window.dbGetBookingsByFlat = async function(flat) {
-    const snap = await getDocs(collection(db, "bookings"));
+    const q = query(collection(db, "bookings"), where("flatNumber", "==", flat.trim()));
+    const snap = await getDocs(q);
     const results = [];
     snap.forEach(d => {
       const data = d.data();
-      if (data.flatNumber && data.flatNumber.trim() === flat.trim()) {
-        window.activeBookingCache[data.orderId] = data;
-        results.push(data);
-      }
+      window.activeBookingCache[data.orderId] = data;
+      results.push(data);
     });
     return results;
   };
 
   window.dbGetPendingBookings = async function() {
-    const snap = await getDocs(collection(db, "bookings"));
+    const q = query(collection(db, "bookings"), where("paymentStatus", "==", "pending"));
+    const snap = await getDocs(q);
     const results = [];
-    snap.forEach(d => {
-      const data = d.data();
-      if (data.paymentStatus === 'pending') {
-        results.push(data);
-      }
-    });
+    snap.forEach(d => results.push(d.data()));
     return results;
   };
 
@@ -2393,7 +2375,6 @@ async function confirmBooking(){
         booking.paymentMethod = paymentMethod;
         booking.utr = utr || null;
         booking.pendingNewAmount = newBookingTotal;
-        booking.pendingItems = newItems; // Exactly the newly added items
       }
     } else {
       const orderId = genOrderId();
@@ -2404,7 +2385,6 @@ async function confirmBooking(){
         utr: (paymentMethod==='upi') ? (utr || null) : null,
         paymentStatus: newBookingTotal>0 ? 'pending' : 'complimentary',
         pendingNewAmount: newBookingTotal,
-        pendingItems: newItems,
         createdAt: Date.now(),
         verifiedAt: null
       };
@@ -2535,8 +2515,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     activeMealKey = getMealKey(currentDayItems[0]);
   }
 
-  const pendingItems = b.pendingItems || [];
-
   let html = `
     <div class="coupon-day-tabs">
       ${bookedDayKeys.map(dId => `
@@ -2547,10 +2525,8 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
       ${currentDayItems.map(it => {
         const mKey = getMealKey(it);
         const typeStr = it.type === 'veg' ? 'Veg' : 'Non-Veg';
-        const isThisPending = pendingItems.some(pi => pi.day === it.day && pi.meal === it.meal && pi.type === it.type);
-        const pendingBadge = isThisPending ? ' ⏳ (Pending Payment)' : '';
         return `
-          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''} ${isThisPending ? 'pending-tab' : ''}" type="button" onclick="window.switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})${pendingBadge}</button>
+          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" type="button" onclick="window.switchTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})</button>
         `;
       }).join('')}
     </div>
@@ -2597,8 +2573,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
       </div>
     `;
 
-    const isThisItemPending = pendingItems.some(pi => pi.day === selectedItem.day && pi.meal === selectedItem.meal && pi.type === selectedItem.type);
-
     html += `
       <div class="meal-qr-card" style="margin-top:6px;">
         <div class="meal-qr-head">
@@ -2607,9 +2581,9 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
         </div>
         ${breakdownBox}
         ${visualServedBadge}
-        ${isUnlocked && !isThisItemPending
+        ${isUnlocked
           ? `<div class="qr-wrap" id="${qid}" style="margin-top:10px;"></div>`
-          : `<div class="qr-locked" style="margin-top:10px; background:#FFF3E8; border:1px dashed var(--marigold); color:#9C4100; font-weight:600;">⏳ Payment Pending Verification for this meal — QR Code &amp; Meal Unlocked After Committee Verification</div>`}
+          : `<div class="qr-locked" style="margin-top:10px;">🔒 Unlocks automatically once payment is verified</div>`}
       </div>
     `;
   }
@@ -3069,6 +3043,138 @@ function renderAdminFlatLookupCard(container, b) {
   renderAdminTabbedTicketContent(b, `adminTabArea_${b.orderId}`);
 }
 
+function renderAdminTabbedTicketContent(b, containerId, activeDayId = null, activeMealKey = null) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const byDay = {};
+  b.items.forEach(it => {
+    if(!byDay[it.day]) byDay[it.day] = { label: it.dayLabel, items: [] };
+    byDay[it.day].items.push(it);
+  });
+
+  const bookedDayKeys = Object.keys(byDay);
+  if (bookedDayKeys.length === 0) return;
+
+  if (!activeDayId || !byDay[activeDayId]) {
+    activeDayId = bookedDayKeys[0];
+  }
+
+  const currentDayItems = byDay[activeDayId].items;
+  const getMealKey = (it) => `${it.meal}_${it.type}`;
+
+  if (!activeMealKey || !currentDayItems.some(i => getMealKey(i) === activeMealKey)) {
+    activeMealKey = getMealKey(currentDayItems[0]);
+  }
+
+  let html = `
+    <div class="coupon-day-tabs">
+      ${bookedDayKeys.map(dId => `
+        <button class="coupon-day-tab ${dId === activeDayId ? 'active' : ''}" type="button" onclick="window.switchAdminTicketDay('${b.orderId}', '${dId}', '${containerId}')">${byDay[dId].label}</button>
+      `).join('')}
+    </div>
+    <div class="coupon-meal-tabs">
+      ${currentDayItems.map(it => {
+        const mKey = getMealKey(it);
+        const typeStr = it.type === 'veg' ? 'Veg' : 'Non-Veg';
+        return `
+          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" type="button" onclick="window.switchAdminTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})</button>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  const selectedItem = currentDayItems.find(it => getMealKey(it) === activeMealKey);
+  if (selectedItem) {
+    const typeTag = selectedItem.type ? `<span class="tag ${selectedItem.type==='veg'?'veg':'nonveg'}">${selectedItem.type==='veg'?'Veg':'Non-veg'}</span>` : '';
+    const freeTag = selectedItem.complimentary ? `<span class="tag free">FREE</span>` : '';
+    const parcelCount = selectedItem.parcelQty || 0;
+    const dineInCount = (selectedItem.qty || 0) - parcelCount;
+    let packagingTags = parcelCount > 0 ? `<span class="tag parcel">📦 ${parcelCount} Parcel</span>` : `<span class="tag dinein">🍽️ Dine-in</span>`;
+
+    let breakdownBox = `
+      <div class="plate-breakdown-box">
+        <div class="pb-item"><div class="p-val">${dineInCount}</div><div class="p-lbl">🍽️ Dine-In</div></div>
+        <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${parcelCount}</div><div class="p-lbl">📦 Parcel Box</div></div>
+        <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${selectedItem.qty}</div><div class="p-lbl">Total Plates</div></div>
+      </div>
+    `;
+
+    const itemIdx = b.items.findIndex(it => it.day === selectedItem.day && it.meal === selectedItem.meal && it.type === selectedItem.type);
+    const hasUnserved = selectedItem.delivered < selectedItem.qty;
+
+    const servedCount = selectedItem.delivered || 0;
+    const totalCount = selectedItem.qty || 1;
+    const percent = Math.min(100, Math.round((servedCount / totalCount) * 100));
+    let statusClass = 'pending';
+    let statusText = 'Not Started';
+    if (servedCount >= totalCount) {
+      statusClass = 'complete';
+      statusText = 'Fully Served ✓';
+    } else if (servedCount > 0) {
+      statusClass = 'partial';
+      statusText = 'In Progress';
+    }
+
+    let visualServedBadge = `
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);">
+        <span style="font-size:12.5px; font-weight:600; color:#8a6a55;">Serving Progress:</span>
+        <div>
+          <span class="served-status-badge ${statusClass}">${statusText} (${servedCount}/${totalCount})</span>
+          <div class="mini-progress-bar"><div class="mini-progress-fill" style="width: ${percent}%;"></div></div>
+        </div>
+      </div>
+    `;
+
+    html += `
+      <div class="meal-qr-card" style="margin-top:6px;">
+        <div class="meal-qr-head">
+          <span class="lbl">${selectedItem.mealLabel}${typeTag}${freeTag}${packagingTags}</span>
+          <span class="val" style="font-weight:700;">${servedCount}/${totalCount} served</span>
+        </div>
+        ${breakdownBox}
+        ${visualServedBadge}
+        ${(b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary') && hasUnserved ? `
+          <button class="btn btn-primary btn-block" style="padding:10px; font-size:14px; margin-top:10px;" onclick="deliverMealFromAdmin('${b.orderId}', ${itemIdx}, '${activeDayId}', '${getMealKey(selectedItem)}')">🍽️ Serve 1 Plate Now</button>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+window.switchAdminTicketDay = function(orderId, dayId, containerId) {
+  const b = window.activeBookingCache[orderId];
+  if (b) renderAdminTabbedTicketContent(b, containerId, dayId, null);
+};
+
+window.switchAdminTicketMeal = function(orderId, dayId, mealKey, containerId) {
+  const b = window.activeBookingCache[orderId];
+  if (b) renderAdminTabbedTicketContent(b, containerId, dayId, mealKey);
+};
+
+async function deliverMealFromAdmin(orderId, itemIdx, currentDayId, currentMealKey) {
+  const b = await fetchBooking(orderId);
+  if(!b) return;
+  const item = b.items[itemIdx];
+  if(item.delivered < item.qty) {
+    item.delivered += 1;
+    await saveBooking(b);
+    window.activeBookingCache[b.orderId] = b;
+    
+    // Re-render the card maintaining the currently selected day & meal tab so it doesn't jump back
+    const container = document.getElementById('adminLookupResults');
+    container.innerHTML = '';
+    renderAdminFlatLookupCard(container, b);
+    renderAdminTabbedTicketContent(b, `adminTabArea_${b.orderId}`, currentDayId, currentMealKey);
+
+    playBeep();
+    showToast(`✅ Served 1 ${item.mealLabel} to ${b.name}`, 'good');
+    generateReports();
+  }
+}
+
 async function markVerifiedFromAdmin(orderId) {
   const b = await fetchBooking(orderId);
   if(!b) return;
@@ -3076,15 +3182,12 @@ async function markVerifiedFromAdmin(orderId) {
   if(utrEl && utrEl.value.trim()) b.utr = utrEl.value.trim();
   b.paymentStatus = 'verified';
   b.pendingNewAmount = 0;
-  b.pendingItems = []; 
   b.verifiedAt = Date.now();
   await saveBooking(b);
 
   const container = document.getElementById('adminLookupResults');
-  if (container) {
-    container.innerHTML = '';
-    renderAdminFlatLookupCard(container, b);
-  }
+  container.innerHTML = '';
+  renderAdminFlatLookupCard(container, b);
   await loadPendingPayments();
   generateReports();
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
@@ -3101,11 +3204,13 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
   let matches = [];
   
   try {
+    // 1. Try direct exact fetch by Order ID first
     const direct = await fetchBooking(cleanQuery);
     if (direct) {
       matches.push(direct);
     }
 
+    // 2. Fetch all bookings and filter safely on the client side (handles Name, Flat, or Order ID substring)
     const all = await window.dbGetAllBookings();
     const qLower = cleanQuery.toLowerCase();
 
@@ -3137,13 +3242,7 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
 }
 
 async function reviewPendingPayment(orderId) {
-  let results = document.getElementById('adminLookupResults');
-  if (document.getElementById('view-committee').classList.contains('hidden')) {
-    results = document.getElementById('serveLookupResults');
-  } else {
-    results = document.getElementById('adminLookupResults');
-  }
-
+  const results = document.getElementById('adminLookupResults');
   if(!results) return;
   results.innerHTML = '<div class="card"><div class="empty">Loading order...</div></div>';
   const b = await fetchBooking(orderId);
@@ -3167,22 +3266,13 @@ async function loadPendingPayments(){
     wrap.innerHTML='';
     pending.forEach(b=>{
       window.activeBookingCache[b.orderId] = b;
-      
-      // ABSOLUTE FIX: Show ONLY the newly added items for pending +more payment verifications
-      const targetItemsList = (b.pendingItems && b.pendingItems.length > 0) ? b.pendingItems : b.items;
-      const pendingMealsDesc = targetItemsList
-        .map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`)
-        .join(', ');
-
       const row = document.createElement('div');
       row.className='deliver-row';
       const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
       const newAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : b.total;
-      
       row.innerHTML = `
         <div class="dr-info">
           <div class="dr-meal">${escapeHtml(b.name)} · Flat ${escapeHtml(b.flatNumber||'')} · New Due: ₹${newAmt}</div>
-          <div class="dr-sub" style="color:var(--marigold); font-weight:600;">➕ New Booking Meals: ${escapeHtml(pendingMealsDesc)}</div>
           <div class="dr-sub">${b.orderId} · ${methodTag}${b.utr?' · UTR '+escapeHtml(b.utr):''}</div>
         </div>
         <button class="btn btn-outline" onclick="reviewPendingPayment('${b.orderId}')">Review</button>
