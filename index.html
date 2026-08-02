@@ -64,7 +64,7 @@
     color:var(--ivory);
     padding:18px 16px 22px;
     position:relative;
-    overflow:visible; /* Fixed to allow dropdown to show outside hero bounds */
+    overflow:visible;
     border-bottom: 3px solid var(--gold);
   }
 
@@ -140,7 +140,7 @@
     justify-content: space-between;
     align-items: center;
     margin-top:14px;
-    overflow: visible; /* Prevent scrollbar clipping */
+    overflow: visible;
     padding-bottom:4px;
     gap: 8px;
   }
@@ -150,7 +150,7 @@
     overflow-x: auto;
     flex-wrap: nowrap;
     padding-bottom: 2px;
-    scrollbar-width: none; /* Hide scrollbars for clean look */
+    scrollbar-width: none;
   }
   .tabs-left::-webkit-scrollbar { display: none; }
 
@@ -179,7 +179,6 @@
     border-color:var(--gold);
     color:var(--maroon-dark);
   }
-  /* Highlighted User Guide Tab Button Style */
   .tab-btn.highlight-guide {
     background: var(--marigold);
     border-color: var(--gold-soft);
@@ -230,7 +229,7 @@
     border-color: var(--gold);
   }
 
-  /* Coupon Tabbed View Styles */
+  /* Coupon Tabbed View Styles (Used in Admin Flat Lookup) */
   .coupon-day-tabs {
     display: flex;
     gap: 6px;
@@ -768,13 +767,11 @@
   </div>
   <div class="tabs">
     <div class="tabs-left">
-      <!-- User Guide Tab made first & highlighted -->
       <button class="tab-btn highlight-guide active" id="tabGuideBtn" onclick="switchTab('guide')">📖 User Guide</button>
       <button class="tab-btn" id="tabBookBtn" onclick="switchTab('book')">🎟️ Book</button>
       <button class="tab-btn" id="tabFindBtn" onclick="switchTab('find')">🔍 My Coupons</button>
     </div>
     <div class="tabs-right">
-      <!-- Admin Dropdown Menu at the Right Side -->
       <button class="tab-btn" id="tabAdminDropdownBtn" onclick="toggleAdminDropdown(event)">⚙️ Admin ▾</button>
       <div id="adminDropdownMenu" class="admin-dropdown-menu hidden">
         <button class="admin-sub-btn" id="tabServeBtn" onclick="switchTab('serve')">🍽️ Counter</button>
@@ -797,7 +794,6 @@
 
       <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">1. How to Book Food Coupons</h3>
       <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
-        <li></strong> Goto the "Book" tab.</li>
         <li><strong>Step 1 (Details):</strong> Enter your full name, select your Block and Flat number, and set a secure <strong>4-digit PIN</strong>. <br>⚠️ <em>Remember this PIN! You will need it to view your coupons or add more meals later.</em></li>
         <li><strong>Step 2 (Choose Meals):</strong> Select your plate quantities across Puja days (Saptami, Ashtami, etc.), choosing between Dine-in or Parcel boxes (+₹15 charge).</li>
         <li><strong>Step 3 (Review & Pay):</strong> Choose Cash or UPI payment. Complete the transaction or record your 12-digit UTR reference number.</li>
@@ -1758,7 +1754,6 @@ function switchTab(tab){
   document.getElementById('tabFindBtn').classList.toggle('active', tab==='find');
   document.getElementById('tabGuideBtn').classList.toggle('active', tab==='guide');
   
-  // Highlight Admin dropdown if any of the sub-tabs are active
   const isAdminSubTab = (tab === 'serve' || tab === 'kitchen' || tab === 'committee');
   const adminDropdownBtn = document.getElementById('tabAdminDropdownBtn');
   adminDropdownBtn.classList.toggle('active', isAdminSubTab);
@@ -1767,7 +1762,6 @@ function switchTab(tab){
   document.getElementById('tabKitchenBtn').classList.toggle('active', tab==='kitchen');
   document.getElementById('tabCommitteeBtn').classList.toggle('active', tab==='committee');
 
-  // Hide dropdown menu after selecting
   document.getElementById('adminDropdownMenu').classList.add('hidden');
 
   if(tab!=='serve') stopCamera();
@@ -2208,7 +2202,6 @@ async function prepareReviewStep(){
   globalEarlierPaidAmount = earlierPaid;
   const combinedTotal = earlierPaid + newBookingTotal;
 
-  // Show only the new booking amount as the payable amount in Step 3
   document.getElementById('grandTotalLbl').textContent = '₹' + newBookingTotal;
   document.getElementById('paidAmountLbl').textContent = newBookingTotal;
   document.getElementById('cashAmountLbl').textContent = newBookingTotal;
@@ -2323,7 +2316,6 @@ async function confirmBooking(){
     if (existingActive && existingActive.booking) {
       booking = existingActive.booking;
       
-      // Smart merging: Combine quantities if the same meal/day/type already exists into the exact same item row
       newItems.forEach(newItem => {
         const existingItem = booking.items.find(i => i.day === newItem.day && i.meal === newItem.meal && i.type === newItem.type);
         if (existingItem) {
@@ -2390,7 +2382,7 @@ function statusLabel(status){
   return '⏳ Payment pending verification';
 }
 function paymentMethodLabel(b){
-  if(b.paymentMethod==='cash') return '💵 Paid in cash';
+  if(b.paymentMethod==='cash') return '💵 Paying by cash';
   if(b.paymentMethod==='upi') return '📱 Paid via UPI' + (b.utr?(' · UTR '+b.utr):'');
   return '';
 }
@@ -2435,7 +2427,6 @@ function renderTicket(b, isFromMyCouponsTab = false){
           <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
           <div class="ticket-pay">${paymentMethodLabel(b)}</div>
           
-          <!-- TABBED VIEW FOR TICKET MEALS -->
           <div id="ticketTabArea_${b.orderId}"></div>
 
           <div class="ticket-item" style="margin-top:12px; border-top:1px solid var(--line); padding-top:8px;">
@@ -2449,7 +2440,6 @@ function renderTicket(b, isFromMyCouponsTab = false){
     <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
     <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="downloadTicketImage('${b.orderId}')">🖼️ Download Ticket to Gallery (PNG)</button>
     
-    <!-- Show 'Book More Coupons' when viewing ticket -->
     <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     
     <button class="btn btn-danger btn-block" style="margin-top:8px;" onclick="deleteUserBooking('${b.orderId}')">🗑️ Delete My Data &amp; Booking</button>
@@ -2508,7 +2498,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     const dineInCount = (selectedItem.qty || 0) - parcelCount;
     let packagingTags = parcelCount > 0 ? `<span class="tag parcel">📦 ${parcelCount} Parcel</span>` : `<span class="tag dinein">🍽️ Dine-in</span>`;
 
-    // UNIVERSAL PLATE BREAKDOWN BOX FOR ALL MEALS & DAYS (Shows Dine-In, Parcel Box, Total Plates)
     let breakdownBox = `
       <div class="plate-breakdown-box">
         <div class="pb-item"><div class="p-val">${dineInCount}</div><div class="p-lbl">🍽️ Dine-In</div></div>
@@ -2708,12 +2697,10 @@ function renderMiniTicketInto(container, b){
       <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')}</div>
       <div class="ticket-pay">${paymentMethodLabel(b)}</div>
       
-      <!-- TABBED VIEW FOR MINI TICKET -->
       <div id="miniTabArea_${b.orderId}"></div>
 
       <button class="btn btn-whatsapp btn-block" style="margin-top:10px;" onclick="shareTicketWhatsApp('${b.orderId}')">📱 Share Ticket on WhatsApp</button>
       
-      <!-- 'Book More Coupons' is shown inside My Coupons search results -->
       <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="bookMoreCoupons('${escapeHtml(b.name)}', '${escapeHtml(b.flatNumber||'')}', '${escapeHtml(b.userPin||'')}')">➕ Book More Coupons</button>
     </div>`;
   renderTabbedTicketContent(b, `miniTabArea_${b.orderId}`);
@@ -2741,7 +2728,6 @@ function bookMoreCoupons(name, flatNumber, pin) {
   document.getElementById('subStatusMsg').innerHTML = '<div class="msg ok" style="margin-top:6px; font-weight:600;">✓ Existing subscription &amp; flat credentials verified.</div>';
   document.getElementById('privacyTermsConfirm').checked = true;
 
-  // Switch to Book tab view
   switchTab('book');
 
   document.getElementById('ticketView').classList.add('hidden');
@@ -2752,7 +2738,6 @@ function bookMoreCoupons(name, flatNumber, pin) {
   renderMealRows();
   updateTotals();
 
-  // Jump directly to Step 2 (Choose Meals)
   goToStep(2);
 }
 
@@ -2811,7 +2796,7 @@ async function renderKitchenDisplay() {
         <div class="kitchen-card-title">${item.day} · ${item.meal}</div>
         <div class="kitchen-counts-row">
           <div>
-            <div class="k-val" style="color:var(--green);">${item.vegDينIn + item.vegParcel || item.vegDineIn}</div>
+            <div class="k-val" style="color:var(--green);">${item.vegDineIn + item.vegParcel}</div>
             <div class="k-lbl">🟢 Veg Total</div>
             <div style="font-size:11px;color:#8a6a55;">(${item.vegDineIn} Counter / ${item.vegParcel} Box)</div>
           </div>
@@ -2933,10 +2918,169 @@ async function searchFlatBookingsAdmin() {
       return;
     }
     results.innerHTML = '';
-    matches.forEach(b => renderLookupCard(results, b, false));
+    matches.forEach(b => renderAdminFlatLookupCard(results, b));
   } catch(e) {
     results.innerHTML = '<div class="card"><div class="empty">Error fetching flat bookings.</div></div>';
   }
+}
+
+/* ================= ENHANCED ADMIN FLAT LOOKUP CARD (Tabular & Clickable like My Coupons) ================= */
+function renderAdminFlatLookupCard(container, b) {
+  const div = document.createElement('div');
+  div.className = 'ticket';
+  div.id = 'admin_lc_' + b.orderId;
+  container.appendChild(div);
+
+  const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
+  const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
+
+  div.innerHTML = `
+    <div class="ticket-head">
+      <div style="font-size:11px;letter-spacing:.1em;color:var(--gold-soft);">ADMIN FLAT LOOKUP</div>
+      <div class="oid">${b.orderId}</div>
+      <div class="status ${b.paymentStatus}">${statusLabel(b.paymentStatus)}</div>
+    </div>
+    <div class="perf"></div>
+    <div class="ticket-body">
+      <div class="ticket-name">${escapeHtml(b.name)}</div>
+      <div class="ticket-phone">Flat ${escapeHtml(b.flatNumber||'')} ${methodTag ? '· '+methodTag : ''}</div>
+      
+      <div id="adminTabArea_${b.orderId}" style="margin-top:10px;"></div>
+
+      ${b.paymentStatus === 'pending' ? `
+        <div class="note alert" style="margin-top:12px;">
+          ⚠️ <strong>Payment Unverified</strong>: Please verify the UTR / Cash receipt and click below to unlock QR codes.
+        </div>
+        <div class="field" style="margin-top:8px;">
+          <label>UTR / Reference Number</label>
+          <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="Enter 12-digit UTR" maxlength="12">
+        </div>
+        <button class="btn btn-primary btn-block" style="margin-top:8px;" onclick="markVerifiedFromAdmin('${b.orderId}')">Mark Payment Verified</button>
+      ` : ''}
+    </div>
+  `;
+  renderAdminTabbedTicketContent(b, `adminTabArea_${b.orderId}`);
+}
+
+function renderAdminTabbedTicketContent(b, containerId, activeDayId = null, activeMealKey = null) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const byDay = {};
+  b.items.forEach(it => {
+    if(!byDay[it.day]) byDay[it.day] = { label: it.dayLabel, items: [] };
+    byDay[it.day].items.push(it);
+  });
+
+  const bookedDayKeys = Object.keys(byDay);
+  if (bookedDayKeys.length === 0) return;
+
+  if (!activeDayId || !byDay[activeDayId]) {
+    activeDayId = bookedDayKeys[0];
+  }
+
+  const currentDayItems = byDay[activeDayId].items;
+  const getMealKey = (it) => `${it.meal}_${it.type}`;
+
+  if (!activeMealKey || !currentDayItems.some(i => getMealKey(i) === activeMealKey)) {
+    activeMealKey = getMealKey(currentDayItems[0]);
+  }
+
+  let html = `
+    <div class="coupon-day-tabs">
+      ${bookedDayKeys.map(dId => `
+        <button class="coupon-day-tab ${dId === activeDayId ? 'active' : ''}" type="button" onclick="window.switchAdminTicketDay('${b.orderId}', '${dId}', '${containerId}')">${byDay[dId].label}</button>
+      `).join('')}
+    </div>
+    <div class="coupon-meal-tabs">
+      ${currentDayItems.map(it => {
+        const mKey = getMealKey(it);
+        const typeStr = it.type === 'veg' ? 'Veg' : 'Non-Veg';
+        return `
+          <button class="coupon-meal-tab ${mKey === activeMealKey ? 'active' : ''}" type="button" onclick="window.switchAdminTicketMeal('${b.orderId}', '${activeDayId}', '${mKey}', '${containerId}')">${it.mealLabel} (${typeStr})</button>
+        `;
+      }).join('')}
+    </div>
+  `;
+
+  const selectedItem = currentDayItems.find(it => getMealKey(it) === activeMealKey);
+  if (selectedItem) {
+    const typeTag = selectedItem.type ? `<span class="tag ${selectedItem.type==='veg'?'veg':'nonveg'}">${selectedItem.type==='veg'?'Veg':'Non-veg'}</span>` : '';
+    const freeTag = selectedItem.complimentary ? `<span class="tag free">FREE</span>` : '';
+    const parcelCount = selectedItem.parcelQty || 0;
+    const dineInCount = (selectedItem.qty || 0) - parcelCount;
+    let packagingTags = parcelCount > 0 ? `<span class="tag parcel">📦 ${parcelCount} Parcel</span>` : `<span class="tag dinein">🍽️ Dine-in</span>`;
+
+    let breakdownBox = `
+      <div class="plate-breakdown-box">
+        <div class="pb-item"><div class="p-val">${dineInCount}</div><div class="p-lbl">🍽️ Dine-In</div></div>
+        <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${parcelCount}</div><div class="p-lbl">📦 Parcel Box</div></div>
+        <div class="pb-item" style="border-left:1px dashed var(--gold); padding-left:12px;"><div class="p-val">${selectedItem.qty}</div><div class="p-lbl">Total Plates</div></div>
+      </div>
+    `;
+
+    const itemIdx = b.items.findIndex(it => it.day === selectedItem.day && it.meal === selectedItem.meal && it.type === selectedItem.type);
+    const hasUnserved = selectedItem.delivered < selectedItem.qty;
+
+    html += `
+      <div class="meal-qr-card" style="margin-top:6px;">
+        <div class="meal-qr-head">
+          <span class="lbl">${selectedItem.mealLabel}${typeTag}${freeTag}${packagingTags}</span>
+          <span class="val">${selectedItem.delivered}/${selectedItem.qty} served</span>
+        </div>
+        ${breakdownBox}
+        ${(b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary') && hasUnserved ? `
+          <button class="btn btn-primary btn-block" style="padding:8px; font-size:13px; margin-top:8px;" onclick="deliverMealFromAdmin('${b.orderId}', ${itemIdx})">Serve 1 Plate Now</button>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
+}
+
+window.switchAdminTicketDay = function(orderId, dayId, containerId) {
+  const b = window.activeBookingCache[orderId];
+  if (b) renderAdminTabbedTicketContent(b, containerId, dayId, null);
+};
+
+window.switchAdminTicketMeal = function(orderId, dayId, mealKey, containerId) {
+  const b = window.activeBookingCache[orderId];
+  if (b) renderAdminTabbedTicketContent(b, containerId, dayId, mealKey);
+};
+
+async function deliverMealFromAdmin(orderId, itemIdx) {
+  const b = await fetchBooking(orderId);
+  if(!b) return;
+  const item = b.items[itemIdx];
+  if(item.delivered < item.qty) {
+    item.delivered += 1;
+    await saveBooking(b);
+    renderAdminFlatLookupCard(document.getElementById('adminLookupResults'), b);
+    const oldCard = document.getElementById('admin_lc_' + orderId);
+    if(oldCard) oldCard.remove();
+    playBeep();
+    showToast(`✅ Served 1 ${item.mealLabel} to ${b.name}`, 'good');
+    generateReports();
+  }
+}
+
+async function markVerifiedFromAdmin(orderId) {
+  const b = await fetchBooking(orderId);
+  if(!b) return;
+  const utrEl = document.getElementById('utr_'+orderId);
+  if(utrEl && utrEl.value.trim()) b.utr = utrEl.value.trim();
+  b.paymentStatus = 'verified';
+  b.pendingNewAmount = 0;
+  b.verifiedAt = Date.now();
+  await saveBooking(b);
+
+  const container = document.getElementById('adminLookupResults');
+  container.innerHTML = '';
+  renderAdminFlatLookupCard(container, b);
+  await loadPendingPayments();
+  generateReports();
+  showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
 
 async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter = false){
@@ -2964,117 +3108,13 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
     return;
   }
   results.innerHTML='';
-  matches.forEach(b=> renderLookupCard(results, b, isFromFoodCounter));
-}
-
-function renderLookupCard(container, b, isFromFoodCounter = false){
-  const div = document.createElement('div');
-  div.className = 'lookup-card';
-  div.id = 'lc_'+b.orderId;
-  container.appendChild(div);
-  paintLookupCard(b, isFromFoodCounter);
-}
-
-function paintLookupCard(b, isFromFoodCounter = false){
-  const div = document.getElementById('lc_'+b.orderId);
-  if(!div) return;
-  const isVerified = (b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary');
-  const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
-  const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
-
-  const aggregatedTotal = b.total || 0;
-  const newBookingAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : (b.paymentStatus === 'pending' ? aggregatedTotal : 0);
-  const alreadyPaidAmt = aggregatedTotal - newBookingAmt;
-
-  div.innerHTML = `
-    <div class="lc-head">
-      <div>
-        <div class="lc-name">${escapeHtml(b.name)}</div>
-        <div class="lc-oid">${b.orderId}${b.flatNumber?' · Flat '+escapeHtml(b.flatNumber):''}${methodTag?' · '+methodTag:''}</div>
-      </div>
-      <span class="pay-badge ${b.paymentStatus}">${badgeText}</span>
-    </div>
-
-    ${!isVerified ? `
-      <div class="note alert" style="margin-top:0; margin-bottom:12px;">
-        ⚠️ <strong>Payment Unverified</strong>: Verify payment in Committee tab before serving meals.<br><br>
-        <strong>Payment Bifurcation:</strong><br>
-        • Total Amount = Aggregated amount of all bookings: <strong>₹${aggregatedTotal}</strong><br>
-        • Already Paid = Amount paid for earlier bookings: <strong>₹${alreadyPaidAmt}</strong><br>
-        • New Booking Amount = Amount to be verified now (${b.paymentMethod === 'cash' ? 'Paid in Cash' : 'Paid via UPI to be verified via URN'}): <strong>₹${newBookingAmt}</strong>
-      </div>
-    ` : ''}
-
-    ${b.items.map((it,idx)=>{
-      const typeTag = it.type ? (it.type==='veg' ? 'Veg' : 'Non-veg') : '';
-      const hasUnserved = it.delivered < it.qty;
-      const parcelCount = it.parcelQty || 0;
-      const dineInCount = (it.qty || 0) - parcelCount;
-      
-      let packagingTags = '';
-      if(parcelCount > 0 && dineInCount > 0) {
-        packagingTags = `<span class="tag dinein">🍽️ ${dineInCount} Dine-in</span><span class="tag parcel">📦 ${parcelCount} Parcel</span>`;
-      } else if(parcelCount > 0) {
-        packagingTags = `<span class="tag parcel">📦 ${parcelCount} Parcel</span>`;
-      } else {
-        packagingTags = `<span class="tag dinein">🍽️ Dine-in</span>`;
-      }
-
-      return `
-      <div class="deliver-row">
-        <div class="dr-info">
-          <div class="dr-meal">${it.dayLabel} · ${it.mealLabel}${typeTag?' — '+typeTag:''} ${packagingTags}</div>
-          <div class="dr-sub">${it.delivered}/${it.qty} Served</div>
-        </div>
-        <div class="deliver-actions">
-          ${isFromFoodCounter && isVerified && hasUnserved ? `
-            <button class="btn btn-primary" style="padding:6px 12px; font-size:12px;" onclick="deliverMeal('${b.orderId}', ${idx})">Serve 1 Meal</button>
-          ` : `
-            <span class="dr-progress">${it.delivered}/${it.qty}</span>
-          `}
-        </div>
-      </div>`;
-    }).join('')}
-
-    ${!isFromFoodCounter && b.paymentStatus==='pending' ? `
-      <div class="field" style="margin-top:10px;">
-        <label>UTR / reference number for New Booking Amount (₹${newBookingAmt}) ${b.paymentMethod==='cash'?'(not required for cash)':''}</label>
-        <input type="text" id="utr_${b.orderId}" value="${b.utr||''}" placeholder="${b.paymentMethod==='cash'?'Optional':'Required for UPI verification'}" maxlength="12">
-      </div>
-      <button class="btn btn-primary btn-block verify-btn" onclick="markVerified('${b.orderId}')">Mark Payment Verified</button>
-    ` : ''}
-  `;
-}
-
-async function deliverMeal(orderId, itemIdx){
-  const b = await fetchBooking(orderId);
-  if(!b || b.paymentStatus === 'pending') return;
-
-  const item = b.items[itemIdx];
-  if(item.delivered < item.qty) {
-    item.delivered += 1;
-    await saveBooking(b);
-    paintLookupCard(b, true);
-    playBeep();
-    showToast(`✅ Served 1 ${item.mealLabel} to ${b.name}`, 'good');
-    generateReports();
-  }
-}
-
-async function markVerified(orderId){
-  const b = await fetchBooking(orderId);
-  if(!b) return;
-  const utrEl = document.getElementById('utr_'+orderId);
-  if(utrEl && utrEl.value.trim()) b.utr = utrEl.value.trim();
-  b.paymentStatus = 'verified';
-  b.pendingNewAmount = 0; // Clear pending amount after verification
-  b.verifiedAt = Date.now();
-  await saveBooking(b);
-  
-  paintLookupCard(b, false);
-  await loadPendingPayments();
-  generateReports();
-  showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
+  matches.forEach(b=> {
+    if (isFromFoodCounter) {
+      renderLookupCard(results, b, true);
+    } else {
+      renderAdminFlatLookupCard(results, b);
+    }
+  });
 }
 
 async function reviewPendingPayment(orderId) {
@@ -3084,8 +3124,8 @@ async function reviewPendingPayment(orderId) {
   const b = await fetchBooking(orderId);
   if (b) {
     results.innerHTML = '';
-    renderLookupCard(results, b, false);
-    const cardEl = document.getElementById('lc_' + orderId);
+    renderAdminFlatLookupCard(results, b);
+    const cardEl = document.getElementById('admin_lc_' + orderId);
     if(cardEl) cardEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
