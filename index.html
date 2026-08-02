@@ -2606,8 +2606,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     `;
 
     const isThisItemPending = pendingItems.some(pi => pi.day === selectedItem.day && pi.meal === selectedItem.meal && pi.type === selectedItem.type);
-    const itemIdx = b.items.findIndex(it => it.day === selectedItem.day && it.meal === selectedItem.meal && it.type === selectedItem.type);
-    const hasUnserved = selectedItem.delivered < selectedItem.qty;
 
     html += `
       <div class="meal-qr-card" style="margin-top:6px;">
@@ -2617,9 +2615,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
         </div>
         ${breakdownBox}
         ${visualServedBadge}
-        ${isUnlocked && !isThisItemPending && hasUnserved ? `
-          <button class="btn btn-primary btn-block" style="padding:10px; font-size:14px; margin-top:10px;" onclick="deliverMealFromAdmin('${b.orderId}', ${itemIdx}, '${activeDayId}', '${getMealKey(selectedItem)}')">🍽️ Serve 1 Plate Now</button>
-        ` : ''}
         ${isUnlocked && !isThisItemPending
           ? `<div class="qr-wrap" id="${qid}" style="margin-top:10px;"></div>`
           : `<div class="qr-locked" style="margin-top:10px; background:#FFF3E8; border:1px dashed var(--marigold); color:#9C4100; font-weight:600;">⏳ Payment Pending Verification for this meal — QR Code &amp; Meal Unlocked After Committee Verification</div>`}
@@ -3078,7 +3073,8 @@ function renderAdminFlatLookupCard(container, b) {
           💰 <strong>Payment Breakdown:</strong><br>
           • Total aggregated amount: ₹${aggregatedTotal}<br>
           • Already paid: ₹${alreadyPaidAmt}<br>
-          • New booking amount: <strong>₹${newBookingAmt}</strong>.<br><br>
+          • New booking amount: <strong>₹${newBookingAmt}</strong>.<br>
+          • Meals selected: <strong>${getPendingMealsText(b)}</strong>.<br><br>
           ⚠️ <strong>Payment Unverified</strong>: Please verify the UTR / Cash receipt and click below to unlock QR codes.
         </div>
         <div class="field" style="margin-top:8px;">
@@ -3113,6 +3109,19 @@ async function markVerifiedFromAdmin(orderId) {
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
 
+
+
+
+function getPendingMealsText(b){
+  const list=(Array.isArray(b.pendingItems) && b.pendingItems.length)
+    ? b.pendingItems
+    : (Array.isArray(b.items) ? b.items : []);
+  return list.map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`).join(', ');
+}
+
+function renderAdminTabbedTicketContent(b, containerId, activeDayId = null, activeMealKey = null) {
+  return renderTabbedTicketContent(b, containerId, activeDayId, activeMealKey);
+}
 /* ROBUST COUNTER & ADMIN LOOKUP FIX */
 async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter = false){
   const results = document.getElementById(targetContainerId);
@@ -3185,10 +3194,8 @@ async function loadPendingPayments(){
     pending.forEach(b=>{
       window.activeBookingCache[b.orderId] = b;
       
-      const targetItemsList = (b.pendingItems && b.pendingItems.length > 0) ? b.pendingItems : b.items;
-      const pendingMealsDesc = targetItemsList
-        .map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`)
-        .join(', ');
+      // STRICTLY SHOW ONLY THE RECENTLY ADDED/PENDING ITEMS FOR +MORE BOOKINGS
+      const pendingMealsDesc = getPendingMealsText(b);
 
       const row = document.createElement('div');
       row.className='deliver-row';
