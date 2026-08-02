@@ -1666,10 +1666,10 @@ async function checkSubscriptionStatus() {
       const upiLink = `upi://pay?pa=${encodeURIComponent(CONFIG.upiId)}&pn=${encodeURIComponent(CONFIG.upiName)}&am=500&cu=INR&tn=${encodeURIComponent('Annual Festival Subscription - Flat '+fullFlatNumber)}`;
       quickPayContainer.innerHTML = `
         <div class="upi-box" style="margin-top:12px;">
-          <div style="font-family:'Baloo 2',cursive; font-weight:700; color:var(--maroon-dark); font-size:15px;">💳 Pay Annual Festival Subscription (₹500)</div>
+          <div style="font-family:'Baloo 2',cursive; font-weight:700; color:var(--maroon-dark); font-size:15px;">💳 Pay Annual Festival Subscription (₹2500)</div>
           <div style="font-size:12.5px; color:#8a6a55; margin:4px 0;">Scan with UPI or tap below to pay your subscription.</div>
           <div id="subUpiQr" style="display:flex;justify-content:center;margin:8px 0;"></div>
-          <a class="btn btn-primary" style="display:inline-block;margin-top:4px;text-decoration:none;" href="${upiLink}">Pay ₹500 via UPI app</a>
+          <a class="btn btn-primary" style="display:inline-block;margin-top:4px;text-decoration:none;" href="${upiLink}">Pay ₹2500 via UPI app</a>
           <div class="note alert" style="margin-top:10px; font-size:12px;">
             ℹ️ <strong>Note:</strong> Please share the screenshot of the subscription payment with <strong>Mr. Gairik</strong> for enablement of food booking (usually enabled within 24 hours).
           </div>
