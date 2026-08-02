@@ -1214,7 +1214,8 @@
   };
 
   window.dbGetBooking = async function(orderId) {
-    const ref = doc(db, "bookings", orderId.toUpperCase().trim());
+    const cleanId = orderId ? orderId.toUpperCase().trim() : "";
+    const ref = doc(db, "bookings", cleanId);
     const snap = await getDoc(ref);
     return snap.exists() ? snap.data() : null;
   };
@@ -1302,10 +1303,7 @@
   };
 
   window.dbGetBookingsByNameAndFlatAndPin = async function(name, flat, pin) {
-    const q = query(
-      collection(db, "bookings"), 
-      where("flatNumber", "==", flat.trim())
-    );
+    const q = query(collection(db, "bookings"), where("flatNumber", "==", flat.trim()));
     const snap = await getDocs(q);
     const results = [];
     snap.forEach(d => {
@@ -3126,6 +3124,8 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
 
   results.innerHTML = '';
   matches.forEach(b => {
+    // Cache the booking so tab switchers can access it
+    window.activeBookingCache[b.orderId] = b;
     if (isFromFoodCounter) {
       renderLookupCard(results, b, true);
     } else {
@@ -3140,6 +3140,7 @@ async function reviewPendingPayment(orderId) {
   results.innerHTML = '<div class="card"><div class="empty">Loading order...</div></div>';
   const b = await fetchBooking(orderId);
   if (b) {
+    window.activeBookingCache[b.orderId] = b;
     results.innerHTML = '';
     renderAdminFlatLookupCard(results, b);
     const cardEl = document.getElementById('admin_lc_' + orderId);
@@ -3156,6 +3157,7 @@ async function loadPendingPayments(){
     pending.sort((a,b)=>a.createdAt-b.createdAt);
     wrap.innerHTML='';
     pending.forEach(b=>{
+      window.activeBookingCache[b.orderId] = b;
       const row = document.createElement('div');
       row.className='deliver-row';
       const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
