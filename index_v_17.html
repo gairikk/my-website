@@ -3073,8 +3073,7 @@ function renderAdminFlatLookupCard(container, b) {
           💰 <strong>Payment Breakdown:</strong><br>
           • Total aggregated amount: ₹${aggregatedTotal}<br>
           • Already paid: ₹${alreadyPaidAmt}<br>
-          • New booking amount: <strong>₹${newBookingAmt}</strong>.<br>
-          • Meals selected: <strong>${((b.pendingItems && b.pendingItems.length ? b.pendingItems : b.items)||[]).map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`).join(', ')}</strong>.<br><br>
+          • New booking amount: <strong>₹${newBookingAmt}</strong>.<br><br>
           ⚠️ <strong>Payment Unverified</strong>: Please verify the UTR / Cash receipt and click below to unlock QR codes.
         </div>
         <div class="field" style="margin-top:8px;">
