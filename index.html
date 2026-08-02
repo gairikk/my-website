@@ -64,7 +64,7 @@
     color:var(--ivory);
     padding:18px 16px 22px;
     position:relative;
-    overflow:hidden;
+    overflow:visible; /* Fixed to allow dropdown to show outside hero bounds */
     border-bottom: 3px solid var(--gold);
   }
 
@@ -140,15 +140,20 @@
     justify-content: space-between;
     align-items: center;
     margin-top:14px;
-    overflow-x:auto;
+    overflow: visible; /* Prevent scrollbar clipping */
     padding-bottom:4px;
-    gap: 4px;
+    gap: 8px;
   }
   .tabs-left {
     display: flex;
-    gap: 4px;
+    gap: 6px;
     overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 2px;
+    scrollbar-width: none; /* Hide scrollbars for clean look */
   }
+  .tabs-left::-webkit-scrollbar { display: none; }
+
   .tabs-right {
     display: flex;
     gap: 4px;
@@ -160,11 +165,11 @@
     border:1px solid rgba(251,243,228,0.35);
     background:rgba(251,243,228,0.08);
     color:var(--ivory);
-    padding:6px 10px;
+    padding:6px 12px;
     border-radius:999px;
     font-family:'Hind Siliguri',sans-serif;
     font-weight:600;
-    font-size:11.5px;
+    font-size:12px;
     cursor:pointer;
     text-align:center;
     white-space:nowrap;
@@ -190,18 +195,18 @@
   /* Admin Dropdown Submenu Container */
   .admin-dropdown-menu {
     position: absolute;
-    top: 115%;
+    top: 120%;
     right: 0;
     background: var(--maroon-dark);
-    border: 1px solid var(--gold-soft);
+    border: 1.5px solid var(--gold-soft);
     border-radius: 12px;
-    padding: 6px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    box-shadow: 0 8px 24px rgba(43,15,15,0.4);
-    z-index: 200;
-    min-width: 140px;
+    gap: 6px;
+    box-shadow: 0 10px 28px rgba(43,15,15,0.5);
+    z-index: 9999;
+    min-width: 170px;
   }
   .admin-dropdown-menu.hidden {
     display: none !important;
@@ -210,13 +215,14 @@
     background: rgba(251,243,228,0.08);
     border: 1px solid rgba(251,243,228,0.2);
     color: var(--ivory);
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 8px;
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 600;
     cursor: pointer;
     text-align: left;
     white-space: nowrap;
+    transition: all 0.2s;
   }
   .admin-sub-btn:hover, .admin-sub-btn.active {
     background: var(--gold);
@@ -791,6 +797,7 @@
 
       <h3 style="font-family:'Baloo 2',cursive; color:var(--maroon); font-size:16px; margin-top:14px;">1. How to Book Food Coupons</h3>
       <ul style="font-size:13.5px; padding-left:18px; color:var(--ink); margin-bottom:12px;">
+        <li><strong>Step 3 (Review & Pay):</strong> Goto the "Book" tab.</li>
         <li><strong>Step 1 (Details):</strong> Enter your full name, select your Block and Flat number, and set a secure <strong>4-digit PIN</strong>. <br>⚠️ <em>Remember this PIN! You will need it to view your coupons or add more meals later.</em></li>
         <li><strong>Step 2 (Choose Meals):</strong> Select your plate quantities across Puja days (Saptami, Ashtami, etc.), choosing between Dine-in or Parcel boxes (+₹15 charge).</li>
         <li><strong>Step 3 (Review & Pay):</strong> Choose Cash or UPI payment. Complete the transaction or record your 12-digit UTR reference number.</li>
@@ -2383,7 +2390,7 @@ function statusLabel(status){
   return '⏳ Payment pending verification';
 }
 function paymentMethodLabel(b){
-  if(b.paymentMethod==='cash') return '💵 Paying by cash';
+  if(b.paymentMethod==='cash') return '💵 Paid in cash';
   if(b.paymentMethod==='upi') return '📱 Paid via UPI' + (b.utr?(' · UTR '+b.utr):'');
   return '';
 }
@@ -2804,7 +2811,7 @@ async function renderKitchenDisplay() {
         <div class="kitchen-card-title">${item.day} · ${item.meal}</div>
         <div class="kitchen-counts-row">
           <div>
-            <div class="k-val" style="color:var(--green);">${item.vegDineIn + item.vegParcel}</div>
+            <div class="k-val" style="color:var(--green);">${item.vegDينIn + item.vegParcel || item.vegDineIn}</div>
             <div class="k-lbl">🟢 Veg Total</div>
             <div style="font-size:11px;color:#8a6a55;">(${item.vegDineIn} Counter / ${item.vegParcel} Box)</div>
           </div>
