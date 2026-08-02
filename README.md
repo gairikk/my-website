@@ -60,7 +60,7 @@ const CONFIG = {
   eventName: "Shubho Durga Puja 2026",
   upiId: "committee@upi",
   upiName: "Puja Committee",
-  committeePin: "7576", // Volunteer/Admin access PIN
+  committeePin: "****", // Volunteer/Admin access PIN
   hmacSecretKey: "BHOG_BELA_SECRET_2026",
   parcelCharge: 15,
   // ... days and meals configuration
