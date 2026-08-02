@@ -3074,7 +3074,7 @@ function renderAdminFlatLookupCard(container, b) {
           • Total aggregated amount: ₹${aggregatedTotal}<br>
           • Already paid: ₹${alreadyPaidAmt}<br>
           • New booking amount: <strong>₹${newBookingAmt}</strong>.<br>
-          • Meals selected: <strong>${(b.pendingItems||[]).map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`).join(', ')}</strong>.<br><br>
+          • Meals selected: <strong>${((b.pendingItems && b.pendingItems.length ? b.pendingItems : b.items)||[]).map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`).join(', ')}</strong>.<br><br>
           ⚠️ <strong>Payment Unverified</strong>: Please verify the UTR / Cash receipt and click below to unlock QR codes.
         </div>
         <div class="field" style="margin-top:8px;">
@@ -3109,11 +3109,6 @@ async function markVerifiedFromAdmin(orderId) {
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
 
-
-
-function renderAdminTabbedTicketContent(b, containerId, activeDayId = null, activeMealKey = null) {
-  return renderTabbedTicketContent(b, containerId, activeDayId, activeMealKey);
-}
 /* ROBUST COUNTER & ADMIN LOOKUP FIX */
 async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter = false){
   const results = document.getElementById(targetContainerId);
@@ -3187,7 +3182,7 @@ async function loadPendingPayments(){
       window.activeBookingCache[b.orderId] = b;
       
       // STRICTLY SHOW ONLY THE RECENTLY ADDED/PENDING ITEMS FOR +MORE BOOKINGS
-      const targetItemsList = b.pendingItems || [];
+      const targetItemsList = (b.pendingItems && b.pendingItems.length > 0) ? b.pendingItems : b.items;
       const pendingMealsDesc = targetItemsList
         .map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`)
         .join(', ');
