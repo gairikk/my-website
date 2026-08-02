@@ -1840,6 +1840,7 @@ async function checkPin(){
       document.getElementById('committeePanel').classList.remove('hidden');
       msg.innerHTML='';
       generateReports();
+      loadPendingPayments();
     } else {
       msg.innerHTML = '<div class="msg err">Incorrect PIN. Check with your booth coordinator.</div>';
     }
@@ -2549,7 +2550,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
 
     const qid = `qr_${b.orderId}_${selectedItem.day}_${selectedItem.meal}_${selectedItem.type}`;
     
-    // VISUALLY ENHANCED SERVED COUNTER BADGE & PROGRESS BAR
     const servedCount = selectedItem.delivered || 0;
     const totalCount = selectedItem.qty || 1;
     const percent = Math.min(100, Math.round((servedCount / totalCount) * 100));
@@ -3007,6 +3007,10 @@ function renderAdminFlatLookupCard(container, b) {
   const badgeText = b.paymentStatus==='verified' ? 'PAID ✓' : (b.paymentStatus==='complimentary' ? 'FREE 🎁' : 'PAYMENT PENDING');
   const methodTag = b.paymentMethod==='cash' ? '💵 Cash' : (b.paymentMethod==='upi' ? '📱 UPI' : '');
 
+  const aggregatedTotal = b.total || 0;
+  const newBookingAmt = b.pendingNewAmount !== undefined ? b.pendingNewAmount : (b.paymentStatus === 'pending' ? aggregatedTotal : 0);
+  const alreadyPaidAmt = aggregatedTotal - newBookingAmt;
+
   div.innerHTML = `
     <div class="ticket-head">
       <div style="font-size:11px;letter-spacing:.1em;color:var(--gold-soft);">BOOKING LOOKUP RESULT</div>
@@ -3022,6 +3026,10 @@ function renderAdminFlatLookupCard(container, b) {
 
       ${b.paymentStatus === 'pending' ? `
         <div class="note alert" style="margin-top:12px;">
+          💰 <strong>Payment Breakdown:</strong><br>
+          • Total aggregated amount: ₹${aggregatedTotal}<br>
+          • Already paid: ₹${alreadyPaidAmt}<br>
+          • New booking amount: <strong>₹${newBookingAmt}</strong>.<br><br>
           ⚠️ <strong>Payment Unverified</strong>: Please verify the UTR / Cash receipt and click below to unlock QR codes.
         </div>
         <div class="field" style="margin-top:8px;">
@@ -3095,7 +3103,6 @@ function renderAdminTabbedTicketContent(b, containerId, activeDayId = null, acti
     const itemIdx = b.items.findIndex(it => it.day === selectedItem.day && it.meal === selectedItem.meal && it.type === selectedItem.type);
     const hasUnserved = selectedItem.delivered < selectedItem.qty;
 
-    // VISUALLY ENHANCED SERVED COUNTER BADGE & PROGRESS BAR
     const servedCount = selectedItem.delivered || 0;
     const totalCount = selectedItem.qty || 1;
     const percent = Math.min(100, Math.round((servedCount / totalCount) * 100));
@@ -3128,7 +3135,7 @@ function renderAdminTabbedTicketContent(b, containerId, activeDayId = null, acti
         ${breakdownBox}
         ${visualServedBadge}
         ${(b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary') && hasUnserved ? `
-          <button class="btn btn-primary btn-block" style="padding:10px; font-size:14px; margin-top:10px;" onclick="deliverMealFromAdmin('${b.orderId}', ${itemIdx})">🍽️ Serve 1 Plate Now</button>
+          <button class="btn btn-primary btn-block" style="padding:10px; font-size:14px; margin-top:10px;" onclick="deliverMealFromAdmin('${b.orderId}', ${itemIdx}, '${activeDayId}', '${getMealKey(selectedItem)}')">🍽️ Serve 1 Plate Now</button>
         ` : ''}
       </div>
     `;
@@ -3147,7 +3154,7 @@ window.switchAdminTicketMeal = function(orderId, dayId, mealKey, containerId) {
   if (b) renderAdminTabbedTicketContent(b, containerId, dayId, mealKey);
 };
 
-async function deliverMealFromAdmin(orderId, itemIdx) {
+async function deliverMealFromAdmin(orderId, itemIdx, currentDayId, currentMealKey) {
   const b = await fetchBooking(orderId);
   if(!b) return;
   const item = b.items[itemIdx];
@@ -3155,9 +3162,13 @@ async function deliverMealFromAdmin(orderId, itemIdx) {
     item.delivered += 1;
     await saveBooking(b);
     window.activeBookingCache[b.orderId] = b;
-    renderAdminFlatLookupCard(document.getElementById('adminLookupResults'), b);
-    const oldCard = document.getElementById('admin_lc_' + orderId);
-    if(oldCard) oldCard.remove();
+    
+    // Re-render the card maintaining the currently selected day & meal tab so it doesn't jump back
+    const container = document.getElementById('adminLookupResults');
+    container.innerHTML = '';
+    renderAdminFlatLookupCard(container, b);
+    renderAdminTabbedTicketContent(b, `adminTabArea_${b.orderId}`, currentDayId, currentMealKey);
+
     playBeep();
     showToast(`✅ Served 1 ${item.mealLabel} to ${b.name}`, 'good');
     generateReports();
@@ -3246,6 +3257,7 @@ async function reviewPendingPayment(orderId) {
 
 async function loadPendingPayments(){
   const wrap = document.getElementById('pendingList');
+  if(!wrap) return;
   wrap.innerHTML = '<div class="empty">Loading…</div>';
   try{
     const pending = await window.dbGetPendingBookings();
