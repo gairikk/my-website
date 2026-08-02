@@ -1349,12 +1349,13 @@
   };
 
   window.dbGetBookingsByNameAndFlatAndPin = async function(name, flat, pin) {
-    const q = query(collection(db, "bookings"), where("flatNumber", "==", flat.trim()));
-    const snap = await getDocs(q);
+    // FIX: Use dbGetAllBookings fallback or client-side filtering to avoid complex composite index requirements
+    const snap = await getDocs(collection(db, "bookings"));
     const results = [];
     snap.forEach(d => {
       const data = d.data();
       if(
+        data.flatNumber && data.flatNumber.trim() === flat.trim() &&
         data.name && data.name.toLowerCase().trim() === name.toLowerCase().trim() &&
         data.userPin && data.userPin === pin.trim()
       ) {
@@ -1366,22 +1367,27 @@
   };
 
   window.dbGetBookingsByFlat = async function(flat) {
-    const q = query(collection(db, "bookings"), where("flatNumber", "==", flat.trim()));
-    const snap = await getDocs(q);
+    const snap = await getDocs(collection(db, "bookings"));
     const results = [];
     snap.forEach(d => {
       const data = d.data();
-      window.activeBookingCache[data.orderId] = data;
-      results.push(data);
+      if (data.flatNumber && data.flatNumber.trim() === flat.trim()) {
+        window.activeBookingCache[data.orderId] = data;
+        results.push(data);
+      }
     });
     return results;
   };
 
   window.dbGetPendingBookings = async function() {
-    const q = query(collection(db, "bookings"), where("paymentStatus", "==", "pending"));
-    const snap = await getDocs(q);
+    const snap = await getDocs(collection(db, "bookings"));
     const results = [];
-    snap.forEach(d => results.push(d.data()));
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.paymentStatus === 'pending') {
+        results.push(data);
+      }
+    });
     return results;
   };
 
@@ -2575,7 +2581,7 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
 
     let visualServedBadge = `
       <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);">
-        <span style="font-size:12.5px; font-weight:600; color:#8a6a55; ">Serving Progress:</span>
+        <span style="font-size:12.5px; font-weight:600; color:#8a6a55;">Serving Progress:</span>
         <div>
           <span class="served-status-badge ${statusClass}">${statusText} (${servedCount}/${totalCount})</span>
           <div class="mini-progress-bar"><div class="mini-progress-fill" style="width: ${percent}%;"></div></div>
