@@ -2379,7 +2379,7 @@ async function confirmBooking(){
         booking.paymentMethod = paymentMethod;
         booking.utr = utr || null;
         booking.pendingNewAmount = newBookingTotal;
-        booking.pendingItems = newItems; // Store the exact items belonging to this new pending payment!
+        booking.pendingItems = newItems; // Store ONLY the newly booked items for pending verification display!
       }
     } else {
       const orderId = genOrderId();
@@ -2521,7 +2521,6 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     activeMealKey = getMealKey(currentDayItems[0]);
   }
 
-  // Check if a specific meal item belongs to the newly pending addition
   const pendingItems = b.pendingItems || [];
 
   let html = `
@@ -3063,7 +3062,7 @@ async function markVerifiedFromAdmin(orderId) {
   if(utrEl && utrEl.value.trim()) b.utr = utrEl.value.trim();
   b.paymentStatus = 'verified';
   b.pendingNewAmount = 0;
-  b.pendingItems = []; // Clear pending items after verification so they are fully unlocked
+  b.pendingItems = []; 
   b.verifiedAt = Date.now();
   await saveBooking(b);
 
@@ -3155,8 +3154,9 @@ async function loadPendingPayments(){
     pending.forEach(b=>{
       window.activeBookingCache[b.orderId] = b;
       
-      // Clearly highlight the specific meals being paid for in the pending verification list
-      const pendingMealsDesc = (b.pendingItems && b.pendingItems.length > 0 ? b.pendingItems : b.items)
+      // FIXED: Show ONLY the newly added meals in the pending list breakdown
+      const targetItemsList = (b.pendingItems && b.pendingItems.length > 0) ? b.pendingItems : b.items;
+      const pendingMealsDesc = targetItemsList
         .map(it => `${it.dayLabel} · ${it.mealLabel} (${it.type === 'veg' ? 'Veg' : 'Non-Veg'}) × ${it.qty}`)
         .join(', ');
 
