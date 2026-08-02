@@ -229,7 +229,7 @@
     border-color: var(--gold);
   }
 
-  /* Coupon Tabbed View Styles (Used in Admin & Counter Lookup) */
+  /* Coupon Tabbed View Styles (Used in Admin Flat Lookup) */
   .coupon-day-tabs {
     display: flex;
     gap: 6px;
@@ -299,6 +299,48 @@
     font-size: 11px;
     font-weight: 600;
     color: #8a6a55;
+  }
+
+  /* ---------- Visual Served Progress Status Styling ---------- */
+  .served-status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .served-status-badge.pending {
+    background: #FFF3E8;
+    color: #C66914;
+    border: 1.5px solid rgba(232, 121, 45, 0.4);
+  }
+  .served-status-badge.partial {
+    background: #EBF3FA;
+    color: #1D63B4;
+    border: 1.5px solid rgba(29, 99, 180, 0.4);
+  }
+  .served-status-badge.complete {
+    background: #E9F4E9;
+    color: var(--green);
+    border: 1.5px solid rgba(76, 122, 76, 0.4);
+  }
+  .mini-progress-bar {
+    width: 60px;
+    height: 6px;
+    background: #e0d2c3;
+    border-radius: 999px;
+    overflow: hidden;
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+  .mini-progress-fill {
+    height: 100%;
+    background: var(--green);
+    border-radius: 999px;
+    transition: width 0.3s ease;
   }
 
   /* ---------- Progress Stepper Bar ---------- */
@@ -2506,16 +2548,42 @@ function renderTabbedTicketContent(b, containerId, activeDayId = null, activeMea
     `;
 
     const qid = `qr_${b.orderId}_${selectedItem.day}_${selectedItem.meal}_${selectedItem.type}`;
+    
+    // VISUALLY ENHANCED SERVED COUNTER BADGE & PROGRESS BAR
+    const servedCount = selectedItem.delivered || 0;
+    const totalCount = selectedItem.qty || 1;
+    const percent = Math.min(100, Math.round((servedCount / totalCount) * 100));
+    let statusClass = 'pending';
+    let statusText = 'Not Started';
+    if (servedCount >= totalCount) {
+      statusClass = 'complete';
+      statusText = 'Fully Served ✓';
+    } else if (servedCount > 0) {
+      statusClass = 'partial';
+      statusText = 'In Progress';
+    }
+
+    let visualServedBadge = `
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);">
+        <span style="font-size:12.5px; font-weight:600; color:#8a6a55;">Serving Progress:</span>
+        <div>
+          <span class="served-status-badge ${statusClass}">${statusText} (${servedCount}/${totalCount})</span>
+          <div class="mini-progress-bar"><div class="mini-progress-fill" style="width: ${percent}%;"></div></div>
+        </div>
+      </div>
+    `;
+
     html += `
       <div class="meal-qr-card" style="margin-top:6px;">
         <div class="meal-qr-head">
           <span class="lbl">${selectedItem.mealLabel}${typeTag}${freeTag}${packagingTags}</span>
-          <span class="val">${selectedItem.delivered}/${selectedItem.qty} served</span>
+          <span class="val" style="font-weight:700;">${servedCount}/${totalCount} served</span>
         </div>
         ${breakdownBox}
+        ${visualServedBadge}
         ${isUnlocked
-          ? `<div class="qr-wrap" id="${qid}"></div>`
-          : `<div class="qr-locked">🔒 Unlocks automatically once payment is verified</div>`}
+          ? `<div class="qr-wrap" id="${qid}" style="margin-top:10px;"></div>`
+          : `<div class="qr-locked" style="margin-top:10px;">🔒 Unlocks automatically once payment is verified</div>`}
       </div>
     `;
   }
@@ -2873,9 +2941,11 @@ function processAndUploadCSV() {
 }
 
 async function fetchBooking(orderId){
-  if(window.activeBookingCache[orderId]) return window.activeBookingCache[orderId];
+  if(!orderId) return null;
+  const cleanId = orderId.toUpperCase().trim();
+  if(window.activeBookingCache[cleanId]) return window.activeBookingCache[cleanId];
   try{
-    const b = await window.dbGetBooking(orderId);
+    const b = await window.dbGetBooking(cleanId);
     if(b) window.activeBookingCache[b.orderId] = b;
     return b;
   }catch(e){ return null; }
@@ -3025,15 +3095,40 @@ function renderAdminTabbedTicketContent(b, containerId, activeDayId = null, acti
     const itemIdx = b.items.findIndex(it => it.day === selectedItem.day && it.meal === selectedItem.meal && it.type === selectedItem.type);
     const hasUnserved = selectedItem.delivered < selectedItem.qty;
 
+    // VISUALLY ENHANCED SERVED COUNTER BADGE & PROGRESS BAR
+    const servedCount = selectedItem.delivered || 0;
+    const totalCount = selectedItem.qty || 1;
+    const percent = Math.min(100, Math.round((servedCount / totalCount) * 100));
+    let statusClass = 'pending';
+    let statusText = 'Not Started';
+    if (servedCount >= totalCount) {
+      statusClass = 'complete';
+      statusText = 'Fully Served ✓';
+    } else if (servedCount > 0) {
+      statusClass = 'partial';
+      statusText = 'In Progress';
+    }
+
+    let visualServedBadge = `
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:8px; padding-top:8px; border-top:1px dashed var(--line);">
+        <span style="font-size:12.5px; font-weight:600; color:#8a6a55;">Serving Progress:</span>
+        <div>
+          <span class="served-status-badge ${statusClass}">${statusText} (${servedCount}/${totalCount})</span>
+          <div class="mini-progress-bar"><div class="mini-progress-fill" style="width: ${percent}%;"></div></div>
+        </div>
+      </div>
+    `;
+
     html += `
       <div class="meal-qr-card" style="margin-top:6px;">
         <div class="meal-qr-head">
           <span class="lbl">${selectedItem.mealLabel}${typeTag}${freeTag}${packagingTags}</span>
-          <span class="val">${selectedItem.delivered}/${selectedItem.qty} served</span>
+          <span class="val" style="font-weight:700;">${servedCount}/${totalCount} served</span>
         </div>
         ${breakdownBox}
+        ${visualServedBadge}
         ${(b.paymentStatus === 'verified' || b.paymentStatus === 'complimentary') && hasUnserved ? `
-          <button class="btn btn-primary btn-block" style="padding:8px; font-size:13px; margin-top:8px;" onclick="deliverMealFromAdmin('${b.orderId}', ${itemIdx})">Serve 1 Plate Now</button>
+          <button class="btn btn-primary btn-block" style="padding:10px; font-size:14px; margin-top:10px;" onclick="deliverMealFromAdmin('${b.orderId}', ${itemIdx})">🍽️ Serve 1 Plate Now</button>
         ` : ''}
       </div>
     `;
@@ -3059,6 +3154,7 @@ async function deliverMealFromAdmin(orderId, itemIdx) {
   if(item.delivered < item.qty) {
     item.delivered += 1;
     await saveBooking(b);
+    window.activeBookingCache[b.orderId] = b;
     renderAdminFlatLookupCard(document.getElementById('adminLookupResults'), b);
     const oldCard = document.getElementById('admin_lc_' + orderId);
     if(oldCard) oldCard.remove();
@@ -3086,7 +3182,7 @@ async function markVerifiedFromAdmin(orderId) {
   showToast(`✓ Payment marked verified for ${b.orderId}`, 'good');
 }
 
-/* FULLY COMPATIBLE MANUAL LOOKUP (COUNTER & ADMIN TABS) */
+/* ROBUST COUNTER & ADMIN LOOKUP FIX */
 async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter = false){
   const results = document.getElementById(targetContainerId);
   if(!results) return;
@@ -3103,7 +3199,7 @@ async function doLookupForTarget(queryVal, targetContainerId, isFromFoodCounter 
       matches.push(direct);
     }
 
-    // 2. Fetch all bookings to perform flexible client-side substring matching for name, flat, and order ID
+    // 2. Fetch all bookings and filter safely on the client side (handles Name, Flat, or Order ID substring)
     const all = await window.dbGetAllBookings();
     const qLower = cleanQuery.toLowerCase();
 
